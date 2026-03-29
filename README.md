@@ -44,7 +44,7 @@ Before running the batch files, ensure the following are installed and available
 From the project root, double-click or run in a terminal:
 
 ```bat
-scripts\run-raytracing-demo.bat
+tools\run-raytracing-demo.bat
 ```
 
 This single command does the following:
@@ -57,7 +57,7 @@ If the build or run fails, the script prints an error message and exits with a n
 
 ### Common Batch File (`_common.bat`)
 
-For applications other than the demo, additional batch scripts can reuse `scripts/_common.bat`. This shared script expects three variables to be set by the caller before it is invoked:
+For applications other than the demo, additional batch scripts can reuse `tools/_common.bat`. This shared script expects three variables to be set by the caller before it is invoked:
 
 | Variable   | Description                                                  | Example      |
 |------------|--------------------------------------------------------------|--------------|
