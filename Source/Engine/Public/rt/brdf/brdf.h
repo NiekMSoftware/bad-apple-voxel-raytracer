@@ -35,3 +35,7 @@
 
 // High-level evaluation
 #include "brdf_evaluate.h"
+
+// BSDF types and unified evaluation
+#include "bsdf_types.h"
+#include "bsdf.h"

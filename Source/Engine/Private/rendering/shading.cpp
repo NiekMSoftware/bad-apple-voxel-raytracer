@@ -1,11 +1,11 @@
-#include "../../Public/rt/rendering/shading.h"
+#include "rt/rendering/shading.h"
 
 #include "rt/core/sky_dome.h"
 #include "rt/scene/scene.h"
 #include "rt/management/light_manager.h"
 #include "rt/rendering/material_manager.h"
 #include "rt/rendering/simd_utils.h"
-#include "rt/brdf/brdf_fresnel.h"
+#include "rt/brdf/bsdf.h"
 #include "rt/rendering/bit_packer.h"
 #include "tmpl8/tmpl8math.h"
 #include "tmpl8/template.h"
@@ -84,44 +84,34 @@ namespace rt::rendering {
         const float3 faceN    = entering ? N : -N;
         const float3 biasedI  = I + faceN * EPSILON;
 
+        // Direct lighting for partially transparent surfaces.
+        // Opacity attenuation is now handled inside bsdf::evaluate()
+        // via the light sampling path, so no manual scaling needed.
         if (mat.m_transparency < 1.0f)
         {
-            const float opacity = 1.0f - mat.m_transparency;
             result.m_color = services.m_lightManager.calculateLighting(
                 biasedI, faceN, V, mat, services.m_scene, services.m_materialManager,
-                services.m_bAccumulate)
-                * opacity * opacity;
+                services.m_bAccumulate);
         }
 
-        const float n1   = entering ? 1.0f : mat.m_indexOfRefraction;
-        const float n2   = entering ? mat.m_indexOfRefraction : 1.0f;
-        const float eta  = n1 / n2;
-        const float cosI = dot(faceN, V);
-        const float fresnel = brdf::fresnelSchlickScalar(cosI, n1, n2);
+        // Save pre-bounce state for Beer-Lambert (volumetric absorption on exit)
+        const float oldT          = ray.m_t;
+        const float oldPrimRadius = ray.m_primRadius;
 
-        const float sin2T = eta * eta * (1.0f - cosI * cosI);
-        const bool  tir   = (sin2T >= 1.0f);
+        // BSDF lobe selection: reflection or transmission
+        const bsdf::BSDFSample bs = bsdf::sample(V, N, mat, services.m_bAccumulate);
 
-        const bool reflect = tir || (services.m_bAccumulate
-                                         ? RandomFloat() < fresnel
-                                         : fresnel > 0.5f);
-
-        if (reflect)
+        if (bs.m_bIsValid)
         {
-            const float3 reflDir = ray.m_d - 2.0f * dot(ray.m_d, faceN) * faceN;
-            ray = core::Ray(biasedI, reflDir, maxRayDist);
-        }
-        else
-        {
-            const float oldT          = ray.m_t;
-            const float oldPrimRadius = ray.m_primRadius;
+            if (bs.m_lobe == bsdf::LobeType::SpecularReflection)
+                ray = core::Ray(biasedI, bs.m_wi, maxRayDist);
+            else {
+                ray = core::Ray(I - faceN * EPSILON, bs.m_wi, maxRayDist);
 
-            const float  cosT    = sqrtf(1.0f - sin2T);
-            const float3 refrDir = eta * ray.m_d + (eta * cosI - cosT) * faceN;
-            ray = core::Ray(I - faceN * EPSILON, refrDir, maxRayDist);
-
-            if (!entering)
-                throughput *= beerLambertSSE(mat.m_baseColor, oldT, oldPrimRadius);
+                // Beer-lambert absorption when exiting a medium
+                if (!entering)
+                    throughput *= beerLambertAbsorption(mat.m_baseColor, oldT, oldPrimRadius);
+            }
         }
 
         return result;
@@ -152,18 +142,13 @@ namespace rt::rendering {
             result.m_color += mat.m_baseColor
                 * sampleIbl(biasedI, N, services) * (1.0f / config::g_kIblRussianRouletteProbability);
 
-        if (mat.m_roughness < config::g_kReflectionRoughnessThreshold)
+        // BSDF specular bounce (fires only if roughness < threshold)
+        const bsdf::BSDFSample bs = bsdf::sample(V, N, mat, services.m_bAccumulate);
+        if (bs.m_bIsValid)
         {
-            const float3 f0 = brdf::calculateF0(
-                mat.m_baseColor, mat.m_metallic, mat.m_indexOfRefraction);
-            const float  cosTheta = max(dot(N, V), 0.0f);
-            const float3 f = brdf::fresnelSchlick(cosTheta, f0);
-
-            result.m_throughputScale = f;
+            result.m_throughputScale = bs.m_value;
             result.m_bContinue       = true;
-
-            const float3 reflDir = ray.m_d - 2.0f * dot(ray.m_d, N) * N;
-            ray = core::Ray(biasedI, reflDir, maxRayDist);
+            ray = core::Ray(biasedI, bs.m_wi, maxRayDist);
         }
 
         return result;

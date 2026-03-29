@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rt/brdf/brdf_evaluate.h"
+#include "rt/brdf/brdf.h"
 #include "rt/brdf/brdf_types.h"
 
 namespace rt::lights {
@@ -29,13 +29,12 @@ namespace rt::lights {
         core::Ray shadowRay(I + N * EPSILON, sample.m_direction, sample.m_distance);
         if (scene.isOccluded(shadowRay, matMgr)) return {0};
 
-        // BRDF evaluation
+        // BSDF evaluation
         brdf::TangentFrame frame = brdf::TangentFrame::fromNormal(N);
         brdf::ShadingContext ctx = brdf::ShadingContext::create(frame, V, sample.m_direction);
 
-        brdf::EvaluationResult brdfResult = brdf::evaluate(ctx, mat);
-
-        return brdfResult.total() * sample.m_intensity * ctx.m_nDotL;
+        const float3 bsdf = bsdf::evaluate(ctx, mat);
+        return bsdf * sample.m_intensity * ctx.m_nDotL;
     }
 
 }  // namespace rt::lights

@@ -70,6 +70,8 @@ target_sources(engine PUBLIC
     Public/rt/brdf/brdf_fresnel.h
     Public/rt/brdf/brdf_geometry.h
     Public/rt/brdf/brdf_ndf.h
+    Public/rt/brdf/bsdf_types.h
+    Public/rt/brdf/bsdf.h
 
     # Rendering
     Public/rt/rendering/material.h
