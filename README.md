@@ -2,7 +2,7 @@
 
 Voxpopuli is a voxel-based CPU path tracer written in C++17. It renders a sparse voxel world alongside analytic primitives (spheres) and triangle meshes, with physically based shading, multiple light types, HDR environment lighting, and temporal reprojection.
 
-Version: 0.3.5
+For the original version that Jacco Bikker made, check out: https://github.com/jbikker/voxpopuli
 
 
 ## Table of Contents
