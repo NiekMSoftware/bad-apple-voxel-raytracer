@@ -1,5 +1,6 @@
 set(DEMO_SOURCES
         src/entry_point.cpp
+        src/physics_manager.cpp
         src/app.cpp
 )
 
@@ -10,6 +11,8 @@ set(DEMO_HEADERS
         include/scene_builder.h
         include/spline.h
         include/spline_editor.h
+        include/collision_detection.h
+        include/physics_manager.h
 )
 
 set(APP_NAME "raytracing-demo")

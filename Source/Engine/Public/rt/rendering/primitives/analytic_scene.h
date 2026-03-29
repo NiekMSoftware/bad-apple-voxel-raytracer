@@ -45,6 +45,7 @@ namespace rt::primitives
         // --- Sphere management ---
         uint addSphere(const primitives::Sphere& s);
         void removeSphere(uint idx);
+        void setSphereCenter(uint idx, const float3& center);
         void clear();
 
         [[nodiscard]] uint getSphereCount() const { return m_sphereCount; }

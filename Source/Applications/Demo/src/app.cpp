@@ -31,7 +31,34 @@ namespace demo {
         buildTheatreFloor(m_renderer.getScene());
         buildAudienceSpheres(m_renderer.getScene().m_analyticScene);
         buildTheatreLights(m_renderer.getLightManager());
+
+        // Physics bouncing ball — original physics system by Thomas M.
+        {
+            constexpr float inv = 1.0f / 512.0f;
+
+            // Drop position: centre stage, above the floor, between camera and audience
+            float3 startPos    = float3(256.0f * inv, 0.30f, 100.0f * inv);
+            float  ballRadius  = 8.0f * inv;  // 8 voxels ≈ 0.0156 normalised
+
+            // Visual sphere — rendered by the analytic scene's BVH
+            rt::primitives::Sphere vis;
+            vis.m_center   = startPos;
+            vis.m_radius   = ballRadius;
+            vis.m_matIndex = 12;  // gold (from scene_builder.h material list)
+            m_physicsSphereIdx = m_renderer.getScene().m_analyticScene.addSphere(vis);
+
+            // Physics object - drives the position each frame
+            demo::PhysicsObject obj{};
+            obj.body.position = startPos;
+            obj.body.velocity = float3(0.05f, 0.0f, 0.02f);  // gentle lateral push
+            obj.body.mass     = 1.0f;
+            obj.radius        = ballRadius;
+            obj.isGrounded    = false;
+            m_physics.AddPhysicsObject(obj);
+        }
+
         m_renderer.getScene().m_analyticScene.buildBvh();
+        m_renderer.getSkyDome().load("assets/textures/meadow_4k.hdr");
 
         auto& cam       = m_renderer.getCamera();
         cam.m_camPos    = float3(0.50f, 0.55f, -0.20f);
@@ -143,6 +170,77 @@ namespace demo {
                 const float intensity = minI + (maxI - minI) * (breath * 0.5f + 0.5f);
                 pointLights[0].setIntensity(intensity);
             }
+        }
+
+        // --- Physics update (system by Thomas M.) ---
+        {
+            const auto& physObj = m_physics.GetPhysicsObject(0);
+
+            // If the ball has settled, count down and relaunch
+            if (!m_physics.Update(m_renderer.getScene(), deltaTime))
+            {
+                m_physicsRelaunchTimer += deltaTime;
+
+                if (m_physicsRelaunchTimer > 2.0f)
+                {
+                    m_physicsRelaunchTimer = 0.0f;
+
+                    constexpr float inv = 1.0f / 512.0f;
+                    float3 launchPos = float3(256.0f * inv, 0.02f, 100.0f * inv);
+
+                    // Random angle around Y axis
+                    float angle = RandomFloat() * 2.0f * PI;
+                    float speed = 0.15f + RandomFloat() * 0.1f;
+
+                    float3 launchVel = float3(
+                        cosf(angle) * speed,    // lateral X
+                        0.08f + RandomFloat() * 0.05f,  // slight upward arc
+                        sinf(angle) * speed     // lateral Z
+                    );
+
+                    m_physics.RelaunchObject(0, launchPos, launchVel);
+                }
+            }
+            else
+            {
+                m_physicsRelaunchTimer = 0.0f;
+            }
+
+            // Keep the ball within the theatre floor bounds
+            {
+                constexpr float inv    = 1.0f / 512.0f;
+                constexpr float floorMin = 55.0f * inv;   // slightly inside the floor edge
+                constexpr float floorMax = 457.0f * inv;
+
+                float3 pos = physObj.body.position;
+                bool clamped = false;
+
+                if (pos.x < floorMin) { pos.x = floorMin; clamped = true; }
+                if (pos.x > floorMax) { pos.x = floorMax; clamped = true; }
+                if (pos.z < floorMin) { pos.z = floorMin; clamped = true; }
+                if (pos.z > floorMax) { pos.z = floorMax; clamped = true; }
+
+                if (clamped)
+                {
+                    // Bounce it back inward with a new random direction
+                    float angle = RandomFloat() * 2.0f * PI;
+                    float speed = 0.10f + RandomFloat() * 0.05f;
+                    float3 newVel = float3(
+                        cosf(angle) * speed,
+                        0.06f,
+                        sinf(angle) * speed
+                    );
+                    m_physics.RelaunchObject(0, pos, newVel);
+                }
+            }
+
+            // Always sync the visual sphere
+            m_renderer.getScene().m_analyticScene.setSphereCenter(
+                m_physicsSphereIdx, physObj.body.position);
+            m_renderer.getScene().m_analyticScene.rebuildSphereBlas();
+
+            if (m_renderer.getAccumulation())
+                m_renderer.resetAccumulator();
         }
 
         m_renderer.renderFrame();

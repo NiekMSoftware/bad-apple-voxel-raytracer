@@ -113,6 +113,11 @@ namespace rt::primitives
         m_aSpheres[idx] = m_aSpheres[--m_sphereCount];
     }
 
+    void AnalyticScene::setSphereCenter(const uint idx, const float3& center) {
+        if (idx < m_sphereCount)
+            m_aSpheres[idx].m_center = center;
+    }
+
     void AnalyticScene::clear()
     {
         m_sphereCount = 0;

@@ -6,6 +6,7 @@
 #include "bad_apple_player.h"
 #include "spline.h"
 #include "spline_editor.h"
+#include "physics_manager.h"
 
 namespace demo {
 
@@ -36,6 +37,10 @@ namespace demo {
         // When true the spline is bypassed and Camera::handleInput() drives
         // the camera directly.  Toggled with Tab in Tick().
         bool m_bCameraFree = false;
+
+        demo::PhysicsManager m_physics;
+        float m_physicsRelaunchTimer = 0.0f;
+        uint m_physicsSphereIdx = 0;
     };
 
 }  // namespace demo

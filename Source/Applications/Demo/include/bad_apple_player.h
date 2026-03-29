@@ -73,6 +73,8 @@ namespace demo {
             m_vPrevFrame.assign(FRAME_SIZE, 0);
             m_currentFrame = 0;
             m_elapsedTime  = 0.0f;
+            m_volume = 0.10f;
+            m_audio.setVolume(m_volume);
             m_bPlaying     = true;
             m_bLoaded      = true;
             m_bFirstFrame  = true;
