@@ -37,8 +37,8 @@ namespace demo {
             constexpr float inv = 1.0f / 512.0f;
 
             // Drop position: centre stage, above the floor, between camera and audience
-            float3 startPos    = float3(256.0f * inv, 0.30f, 100.0f * inv);
-            float  ballRadius  = 8.0f * inv;  // 8 voxels ≈ 0.0156 normalised
+            const float3 startPos    = float3(256.0f * inv, 0.30f, 100.0f * inv);
+            const float  ballRadius  = 8.0f * inv;  // 8 voxels ≈ 0.0156 normalised
 
             // Visual sphere — rendered by the analytic scene's BVH
             rt::primitives::Sphere vis;
@@ -124,7 +124,8 @@ namespace demo {
 
         // --- Animate the point light (index 0 in the point light list) ---
         {
-            m_pointLightTime += deltaTime;
+            if (m_badApple.isPlaying())
+                m_pointLightTime += deltaTime;
 
             auto& pointLights = m_renderer.getLightManager().getPointLights();
             if (!pointLights.empty())
@@ -177,70 +178,71 @@ namespace demo {
             const auto& physObj = m_physics.GetPhysicsObject(0);
 
             // If the ball has settled, count down and relaunch
-            if (!m_physics.Update(m_renderer.getScene(), deltaTime))
+            if (m_badApple.isPlaying())
             {
-                m_physicsRelaunchTimer += deltaTime;
+                if (!m_physics.Update(m_renderer.getScene(), deltaTime))
+                {
+                    m_physicsRelaunchTimer += deltaTime;
 
-                if (m_physicsRelaunchTimer > 2.0f)
+                    if (m_physicsRelaunchTimer > 2.0f)
+                    {
+                        m_physicsRelaunchTimer = 0.0f;
+
+                        constexpr float inv = 1.0f / 512.0f;
+                        const float3 launchPos = float3(256.0f * inv, 0.02f, 100.0f * inv);
+
+                        const float angle = RandomFloat() * 2.0f * PI;
+                        const float speed = 0.25f + RandomFloat() * 0.15f;
+
+                        const float3 launchVel = float3(
+                            cosf(angle) * speed,
+                            0.15f + RandomFloat() * 0.1f,
+                            sinf(angle) * speed
+                        );
+
+                        m_physics.RelaunchObject(0, launchPos, launchVel);
+                    }
+                }
+                else
                 {
                     m_physicsRelaunchTimer = 0.0f;
-
-                    constexpr float inv = 1.0f / 512.0f;
-                    float3 launchPos = float3(256.0f * inv, 0.02f, 100.0f * inv);
-
-                    // Random angle around Y axis
-                    float angle = RandomFloat() * 2.0f * PI;
-                    float speed = 0.15f + RandomFloat() * 0.1f;
-
-                    float3 launchVel = float3(
-                        cosf(angle) * speed,    // lateral X
-                        0.08f + RandomFloat() * 0.05f,  // slight upward arc
-                        sinf(angle) * speed     // lateral Z
-                    );
-
-                    m_physics.RelaunchObject(0, launchPos, launchVel);
                 }
-            }
-            else
-            {
-                m_physicsRelaunchTimer = 0.0f;
-            }
 
-            // Keep the ball within the theatre floor bounds
-            {
-                constexpr float inv    = 1.0f / 512.0f;
-                constexpr float floorMin = 55.0f * inv;   // slightly inside the floor edge
-                constexpr float floorMax = 457.0f * inv;
-
-                float3 pos = physObj.body.position;
-                bool clamped = false;
-
-                if (pos.x < floorMin) { pos.x = floorMin; clamped = true; }
-                if (pos.x > floorMax) { pos.x = floorMax; clamped = true; }
-                if (pos.z < floorMin) { pos.z = floorMin; clamped = true; }
-                if (pos.z > floorMax) { pos.z = floorMax; clamped = true; }
-
-                if (clamped)
+                // Keep the ball within the theatre floor bounds
                 {
-                    // Bounce it back inward with a new random direction
-                    float angle = RandomFloat() * 2.0f * PI;
-                    float speed = 0.10f + RandomFloat() * 0.05f;
-                    float3 newVel = float3(
-                        cosf(angle) * speed,
-                        0.06f,
-                        sinf(angle) * speed
-                    );
-                    m_physics.RelaunchObject(0, pos, newVel);
+                    constexpr float inv      = 1.0f / 512.0f;
+                    constexpr float floorMin = 55.0f * inv;
+                    constexpr float floorMax = 457.0f * inv;
+
+                    float3 pos = physObj.body.position;
+                    bool clamped = false;
+
+                    if (pos.x < floorMin) { pos.x = floorMin; clamped = true; }
+                    if (pos.x > floorMax) { pos.x = floorMax; clamped = true; }
+                    if (pos.z < floorMin) { pos.z = floorMin; clamped = true; }
+                    if (pos.z > floorMax) { pos.z = floorMax; clamped = true; }
+
+                    if (clamped)
+                    {
+                        const float angle = RandomFloat() * 2.0f * PI;
+                        const float speed = 0.20f + RandomFloat() * 0.10f;
+                        const float3 newVel = float3(
+                            cosf(angle) * speed,
+                            0.12f,
+                            sinf(angle) * speed
+                        );
+                        m_physics.RelaunchObject(0, pos, newVel);
+                    }
                 }
+
+                // Always sync the visual sphere
+                m_renderer.getScene().m_analyticScene.setSphereCenter(
+                    m_physicsSphereIdx, physObj.body.position);
+                m_renderer.getScene().m_analyticScene.rebuildSphereBlas();
+
+                if (m_renderer.getAccumulation())
+                    m_renderer.resetAccumulator();
             }
-
-            // Always sync the visual sphere
-            m_renderer.getScene().m_analyticScene.setSphereCenter(
-                m_physicsSphereIdx, physObj.body.position);
-            m_renderer.getScene().m_analyticScene.rebuildSphereBlas();
-
-            if (m_renderer.getAccumulation())
-                m_renderer.resetAccumulator();
         }
 
         m_renderer.renderFrame();

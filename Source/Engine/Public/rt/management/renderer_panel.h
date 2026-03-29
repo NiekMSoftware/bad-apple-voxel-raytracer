@@ -79,8 +79,8 @@ namespace rt::management {
         bool m_bVisible = true;
 
         // Resolution / scale state
-        int   m_selectedPreset = 1;      // default: 640 x 480
-        float m_renderScale    = 1.0f;   // viewport display scale, not render resolution
+        int   m_selectedPreset = 2;      // default: 800 x 600
+        float m_renderScale    = 0.5f;   // viewport display scale, not render resolution
 
         std::vector<std::string> m_hdrFiles;
         int                      m_selectedHdr = 0;

@@ -17,7 +17,7 @@ namespace rt::management {
         [[nodiscard]] bool isVisible() const { return m_bVisible; }
 
     private:
-        bool m_bVisible = true;
+        bool m_bVisible = false;
 
         int m_selDir = -1;
         int m_selPt = -1;

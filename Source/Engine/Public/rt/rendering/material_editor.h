@@ -20,7 +20,7 @@ namespace rt::rendering {
         [[nodiscard]] bool isVisible() const { return m_bVisible; }
 
     private:
-        bool m_bVisible = true;
+        bool m_bVisible = false;
 
         // Internal UI sections
         static void renderMaterialList(MaterialManager& materialManager);

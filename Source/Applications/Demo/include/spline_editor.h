@@ -283,7 +283,7 @@ namespace demo {
         [[nodiscard]] bool isVisible() const { return m_bVisible; }
 
     private:
-        bool m_bVisible       = true;
+        bool m_bVisible       = false;
         char m_savePath[256]  = "assets/camera_spline.bin";
         char m_statusMsg[128] = {};
         bool m_statusOk       = true;
