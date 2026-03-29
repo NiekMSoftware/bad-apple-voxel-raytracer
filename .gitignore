@@ -65,6 +65,7 @@ cmake-build-*/
 
 # Runtime generated files
 imgui.ini
+!assets/imgui.ini
 camera.bin
 camera_spline.bin
 

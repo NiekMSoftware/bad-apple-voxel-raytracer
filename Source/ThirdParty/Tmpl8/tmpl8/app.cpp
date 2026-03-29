@@ -126,7 +126,7 @@ int main()
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	// io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	io.IniFilename = "assets/imgui.ini";
 
 	Shader* shader = new Shader(
 		"#version 330\nin vec4 p;\nout vec2 u;void main(){u=vec2((p.x+1)/2,1-(p.y+1)/2);gl_Position=vec4(p.x,p.y,1,1);}",
