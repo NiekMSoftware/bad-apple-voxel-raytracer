@@ -1,0 +1,102 @@
+{
+  "version": 3,
+  "configurePresets": [
+
+    {
+      "name": "base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+
+    {
+      "name": "base-msvc",
+      "hidden": true,
+      "inherits": "base",
+      "generator": "Visual Studio 17 2022",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER":   "cl",
+        "CMAKE_CXX_COMPILER": "cl"
+      }
+    },
+    {
+      "name": "base-clang-cl",
+      "hidden": true,
+      "inherits": "base",
+      "generator": "Visual Studio 17 2022",
+      "toolset": "ClangCL",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER":   "clang-cl",
+        "CMAKE_CXX_COMPILER": "clang-cl"
+      }
+    },
+    {
+      "name": "base-gcc",
+      "hidden": true,
+      "inherits": "base",
+      "generator": "Ninja Multi-Config",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER":   "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "base-clang",
+      "hidden": true,
+      "inherits": "base",
+      "generator": "Ninja Multi-Config",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER":   "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+
+    {
+      "name": "msvc",
+      "displayName": "MSVC",
+      "description": "Build all projects with MSVC",
+      "inherits": "base-msvc",
+      "binaryDir": "${sourceDir}/build/msvc"
+    },
+    {
+      "name": "clang-cl",
+      "displayName": "Clang-cl",
+      "description": "Build all projects with Clang-cl",
+      "inherits": "base-clang-cl",
+      "binaryDir": "${sourceDir}/build/clang-cl"
+    },
+    {
+      "name": "gcc",
+      "displayName": "GCC",
+      "description": "Build all projects with GCC",
+      "inherits": "base-gcc",
+      "binaryDir": "${sourceDir}/build/gcc"
+    },
+    {
+      "name": "clang",
+      "displayName": "Clang",
+      "description": "Build all projects with Clang",
+      "inherits": "base-clang",
+      "binaryDir": "${sourceDir}/build/clang"
+    }
+  ],
+  "buildPresets": [
+
+    { "name": "msvc-debug",       "displayName": "MSVC - Debug",              "configurePreset": "msvc",     "configuration": "Debug"          },
+    { "name": "msvc-release",     "displayName": "MSVC - Release",            "configurePreset": "msvc",     "configuration": "Release"        },
+    { "name": "msvc-dev",         "displayName": "MSVC - RelWithDebInfo",     "configurePreset": "msvc",     "configuration": "RelWithDebInfo" },
+
+    { "name": "clang-cl-debug",   "displayName": "Clang-cl - Debug",          "configurePreset": "clang-cl", "configuration": "Debug"          },
+    { "name": "clang-cl-release", "displayName": "Clang-cl - Release",        "configurePreset": "clang-cl", "configuration": "Release"        },
+    { "name": "clang-cl-dev",     "displayName": "Clang-cl - RelWithDebInfo", "configurePreset": "clang-cl", "configuration": "RelWithDebInfo" },
+
+    { "name": "gcc-debug",        "displayName": "GCC - Debug",               "configurePreset": "gcc",      "configuration": "Debug"          },
+    { "name": "gcc-release",      "displayName": "GCC - Release",             "configurePreset": "gcc",      "configuration": "Release"        },
+    { "name": "gcc-dev",          "displayName": "GCC - RelWithDebInfo",      "configurePreset": "gcc",      "configuration": "RelWithDebInfo" },
+
+    { "name": "clang-debug",      "displayName": "Clang - Debug",             "configurePreset": "clang",    "configuration": "Debug"          },
+    { "name": "clang-release",    "displayName": "Clang - Release",           "configurePreset": "clang",    "configuration": "Release"        },
+    { "name": "clang-dev",        "displayName": "Clang - RelWithDebInfo",    "configurePreset": "clang",    "configuration": "RelWithDebInfo" }
+  ]
+}

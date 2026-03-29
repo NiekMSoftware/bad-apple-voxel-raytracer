@@ -1,0 +1,73 @@
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+_deps/
+CMakeUserPresets.json
+
+# Build directories
+build/
+out/
+x64/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.sln.docstates
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.VC.opendb
+
+# JetBrains IDEs (CLion, etc.)
+.idea/
+cmake-build-*/
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Debug files
+*.pdb
+*.ilk
+*.idb
+
+# Archives
+*.zip
+*.tar.gz
+*.7z
+
+# Runtime generated files
+imgui.ini
+camera.bin
+camera_spline.bin
+
+# OS
+.DS_Store
+Thumbs.db
