@@ -4,6 +4,8 @@ Voxpopuli is a voxel-based CPU path tracer written in C++17. It renders a sparse
 
 For the original version that Jacco Bikker made, check out: https://github.com/jbikker/voxpopuli
 
+[![Voxpopuli Demo](https://img.youtube.com/vi/wcOL_cHXLmM/maxresdefault.jpg)](https://youtu.be/wcOL_cHXLmM)
+
 
 ## Table of Contents
 
