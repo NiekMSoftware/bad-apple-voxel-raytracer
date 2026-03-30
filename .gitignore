@@ -47,6 +47,7 @@ cmake-build-*/
 *.la
 *.a
 *.lib
+!Source/ThirdParty/GLFW/lib-vc2022/glfw3.lib
 
 # Executables
 *.exe
