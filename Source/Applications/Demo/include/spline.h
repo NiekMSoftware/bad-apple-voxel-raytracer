@@ -2,6 +2,7 @@
 
 #include "tmpl8/template.h"
 #include <algorithm>
+#include <cmath>
 
 namespace demo {
 
@@ -10,12 +11,27 @@ namespace demo {
     //
     // Generic non-uniform Catmull-Rom spline.
     //
-    // Endpoint handling:
+    // Endpoint handling (non-loop mode):
     //   Standard Catmull-Rom requires a phantom point before the first and after
     //   the last keyframe, which meant the first and last recorded keyframes were
     //   never actually interpolated.  This implementation duplicates the endpoints
     //   internally inside evaluate() so every recorded keyframe is reachable and
     //   the minimum usable count is 2 (not 4).
+    //
+    // Loop mode:
+    //   When m_bLoop is true, control-point indices wrap around using modular
+    //   arithmetic so the curve returns smoothly from the last keyframe back to
+    //   the first.  An extra virtual segment of average-step duration bridges
+    //   the last keyframe to the first in the time domain.
+    //
+    //   Reference for the wrapping technique:
+    //     Habrador, "Catmull-Rom Splines" tutorial
+    //     https://www.habrador.com/tutorials/interpolation/1-catmull-rom-splines/
+    //     (ClampListPos modular-index pattern for closed loops)
+    //
+    //     Boost.Math Catmull-Rom documentation:
+    //     https://www.boost.org/doc/libs/master/libs/math/doc/html/math_toolkit/catmull_rom.html
+    //     (Internally represents curves as closed via index wrapping)
     //
     // Reference:
     //   Catmull, E. & Rom, R. (1974). "A Class of Local Interpolating Splines."
@@ -91,17 +107,35 @@ namespace demo {
             m_values.clear();
         }
 
+        void setLoop(const bool loop) { m_bLoop = loop; }
+        [[nodiscard]] bool isLooping() const { return m_bLoop; }
+
+        // Total duration of one loop cycle.
+        // When looping, an extra segment connects the last keyframe back
+        // to the first.  Its duration equals the average segment length,
+        // keeping the return speed consistent with the rest of the path.
+        [[nodiscard]] float loopDuration() const
+        {
+            const int n = static_cast<int>(m_times.size());
+            if (n < 2) return 0.0f;
+            const float totalSpan = m_times.back() - m_times.front();
+            if (!m_bLoop) return totalSpan;
+            const float avgStep = totalSpan / static_cast<float>(n - 1);
+            return totalSpan + avgStep;
+        }
+
         // -----------------------------------------------------------------------
         // evaluate
         //
         // Returns the interpolated value at globalT.
-        // Clamps outside [startTime, endTime] to the first/last keyframe value.
         //
-        // Endpoint duplication: when the segment is at the first or last index,
-        // the missing neighbour is replaced with the endpoint value itself.
-        // This means p0==p1 at the start and p2==p3 at the end, which causes
-        // the curve to arrive/depart tangentially from the endpoint -- a natural
-        // and well-defined behaviour.
+        // NON-LOOP MODE:
+        //   Clamps outside [startTime, endTime] to the first/last keyframe value.
+        //   Endpoint duplication for phantom points.
+        //
+        // LOOP MODE:
+        //   Wraps globalT into [startTime, startTime + loopDuration) via fmod.
+        //   Control-point indices wrap modularly (standard closed-loop technique).
         //
         // Formula (Catmull-Rom expanded matrix form):
         //   q(t) = 0.5 * (
@@ -121,6 +155,77 @@ namespace demo {
             const int n = static_cast<int>(m_times.size());
             if (n == 0) return T{};
             if (n == 1) return m_values[0];
+
+            // ==============================================================
+            // LOOP PATH
+            // ==============================================================
+            if (m_bLoop && n >= 2)
+            {
+                const float totalSpan = m_times.back() - m_times.front();
+                const float avgStep   = totalSpan / static_cast<float>(n - 1);
+                const float cycleDur  = totalSpan + avgStep; // includes return segment
+                const float baseT     = m_times.front();
+
+                // Wrap globalT into [0, cycleDur)
+                float wrapped = globalT - baseT;
+                wrapped = std::fmod(wrapped, cycleDur);
+                if (wrapped < 0.0f) wrapped += cycleDur;
+
+                // Find which segment we're in.
+                // Segments 0..n-2 are the normal keyframe-to-keyframe segments.
+                // Segment n-1 is the virtual return segment (last -> first).
+                int   seg      = n - 1;
+                float segStart = m_times.back() - baseT;
+                float segEnd   = cycleDur;
+
+                for (int s = 0; s < n - 1; s++)
+                {
+                    const float sEnd = m_times[s + 1] - baseT;
+                    if (wrapped < sEnd)
+                    {
+                        seg      = s;
+                        segStart = m_times[s] - baseT;
+                        segEnd   = sEnd;
+                        break;
+                    }
+                }
+
+                const float segLen = segEnd - segStart;
+                float localT = (segLen > 0.0f)
+                    ? (wrapped - segStart) / segLen
+                    : 0.0f;
+                if (localT < 0.0f) localT = 0.0f;
+                if (localT > 1.0f) localT = 1.0f;
+
+                // Modular index wrapping -- the standard closed-loop Catmull-Rom
+                // technique.  Each index wraps around using ((idx % n) + n) % n.
+                //
+                // Reference:
+                //   Habrador tutorial "ClampListPos" pattern
+                //   Boost.Math catmull_rom internal closed representation
+                const int i1 =   seg % n;
+                const int i0 = ((seg - 1) % n + n) % n;
+                const int i2 =  (seg + 1) % n;
+                const int i3 =  (seg + 2) % n;
+
+                const T& p0 = m_values[i0];
+                const T& p1 = m_values[i1];
+                const T& p2 = m_values[i2];
+                const T& p3 = m_values[i3];
+
+                const float t2 = localT * localT;
+                const float t3 = t2 * localT;
+
+                return (p1 * 2.0f
+                    + (p2 - p0) * localT
+                    + (p0 * 2.0f - p1 * 5.0f + p2 * 4.0f - p3) * t2
+                    + (p0 * -1.0f + p1 * 3.0f - p2 * 3.0f + p3) * t3)
+                    * 0.5f;
+            }
+
+            // ==============================================================
+            // ORIGINAL NON-LOOP PATH (unchanged)
+            // ==============================================================
 
             // Clamp to valid range
             if (globalT <= m_times[0])     return m_values[0];
@@ -180,6 +285,7 @@ namespace demo {
 
         std::vector<float> m_times;
         std::vector<T>     m_values;
+        bool               m_bLoop = false;
     };
 
 }  // namespace demo

@@ -30,6 +30,7 @@ namespace demo {
     {
         buildTheatreFloor(m_renderer.getScene());
         buildAudienceSpheres(m_renderer.getScene().m_analyticScene);
+        buildThousandSpheres(m_renderer.getScene().m_analyticScene);
         buildTheatreLights(m_renderer.getLightManager());
 
         // Physics bouncing ball — original physics system by Thomas M.
@@ -107,12 +108,14 @@ namespace demo {
         else if (m_posSpline.keyframeCount() >= 2)
         {
             // Sync spline time to the bad apple playback position.
-            // Clamp to endTime so the camera holds at the last keyframe
-            // once the spline is shorter than the video.
-            const float endT = m_posSpline.endTime();
             m_splineTime = m_badApple.getPlaybackTime();
-            if (m_splineTime > endT)
-                m_splineTime = endT;
+
+            if (!m_posSpline.isLooping())
+            {
+                const float endT = m_posSpline.endTime();
+                if (m_splineTime > endT)
+                    m_splineTime = endT;
+            }
 
             cam.m_camPos    = m_posSpline.evaluate(m_splineTime);
             cam.m_camTarget = m_targetSpline.evaluate(m_splineTime);

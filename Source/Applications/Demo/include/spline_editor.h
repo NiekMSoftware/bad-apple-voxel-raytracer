@@ -16,6 +16,12 @@
 //     float  target.x    (4 bytes)
 //     float  target.y    (4 bytes)
 //     float  target.z    (4 bytes)
+//   [1 byte]   uint8_t   loop flag (0 or 1)  -- appended after keyframes
+//
+// The loop flag is appended at the end for backward compatibility.
+// If the file was saved without it (old format), the flag defaults to 0
+// (no looping).  Detection is by file-size: if exactly
+// 4 + N*28 bytes are present, the flag is absent.
 //
 // Both splines share the same count and timestamps so one file stores both.
 // ============================================================================
@@ -49,9 +55,11 @@ namespace demo {
                      Spline<float3>& targetSpline,
                      rt::core::Camera& cam)
         {
-            const bool ok = loadFromFile(posSpline, targetSpline, m_savePath);
+            const bool ok = loadFromFile(posSpline, targetSpline, m_savePath, m_bLoop);
             if (ok)
             {
+                posSpline.setLoop(m_bLoop);
+                targetSpline.setLoop(m_bLoop);
                 snapCameraToStart(posSpline, targetSpline, cam);
                 snprintf(m_statusMsg, sizeof(m_statusMsg),
                     "Auto-loaded %d keyframes from %s",
@@ -102,15 +110,18 @@ namespace demo {
                 ImGui::SetTooltip("Record current camera pos and target\nat t = lastKeyframe + step");
 
             // ------------------------------------------------------------------
-            // Row 2: Save / Load / Clear / path
+            // Row 2: Save / Load / Clear / path / Loop toggle
             // ------------------------------------------------------------------
             if (ImGui::Button("Save"))
             {
-                const bool ok = saveToFile(posSpline, targetSpline, m_savePath);
-                snprintf(m_statusMsg, sizeof(m_statusMsg),
-                    ok ? "Saved %d keyframes to %s"
-                       : "Save FAILED: %s",
-                    posSpline.keyframeCount(), m_savePath);
+                const bool ok = saveToFile(posSpline, targetSpline, m_savePath, m_bLoop);
+                if (ok)
+                    snprintf(m_statusMsg, sizeof(m_statusMsg),
+                        "Saved %d keyframes to %s",
+                        posSpline.keyframeCount(), m_savePath);
+                else
+                    snprintf(m_statusMsg, sizeof(m_statusMsg),
+                        "Save FAILED: %s", m_savePath);
                 m_statusOk = ok;
             }
             if (ImGui::IsItemHovered())
@@ -119,13 +130,21 @@ namespace demo {
             ImGui::SameLine();
             if (ImGui::Button("Load"))
             {
-                const bool ok = loadFromFile(posSpline, targetSpline, m_savePath);
+                const bool ok = loadFromFile(posSpline, targetSpline, m_savePath, m_bLoop);
                 if (ok)
+                {
+                    posSpline.setLoop(m_bLoop);
+                    targetSpline.setLoop(m_bLoop);
                     snapCameraToStart(posSpline, targetSpline, cam);
-                snprintf(m_statusMsg, sizeof(m_statusMsg),
-                    ok ? "Loaded %d keyframes from %s"
-                       : "Load FAILED: %s",
-                    posSpline.keyframeCount(), m_savePath);
+                    snprintf(m_statusMsg, sizeof(m_statusMsg),
+                        "Loaded %d keyframes from %s",
+                        posSpline.keyframeCount(), m_savePath);
+                }
+                else
+                {
+                    snprintf(m_statusMsg, sizeof(m_statusMsg),
+                        "Load FAILED: %s", m_savePath);
+                }
                 m_statusOk = ok;
                 if (ok) changed = true;
             }
@@ -158,6 +177,21 @@ namespace demo {
                                : ImVec4(1.0f, 0.4f, 0.4f, 1.0f),
                     "%s", m_statusMsg);
             }
+
+            // ------------------------------------------------------------------
+            // Row 3: Loop toggle
+            // ------------------------------------------------------------------
+            if (ImGui::Checkbox("Loop spline", &m_bLoop))
+            {
+                posSpline.setLoop(m_bLoop);
+                targetSpline.setLoop(m_bLoop);
+                changed = true;
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(
+                    "When enabled, the spline loops back to the\n"
+                    "first keyframe after reaching the last one.\n"
+                    "This flag is saved into the binary file.");
 
             ImGui::Separator();
 
@@ -269,9 +303,17 @@ namespace demo {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.1f, 1.0f),
                     "Need >= 4 keyframes to run the spline  (%d so far).", count);
             else
-                ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f),
-                    "%d keyframes  |  %.1f s  to  %.1f s",
-                    count, posSpline.startTime(), posSpline.endTime());
+            {
+                if (m_bLoop)
+                    ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f),
+                        "%d keyframes  |  %.1f s  to  %.1f s  |  loop cycle: %.1f s",
+                        count, posSpline.startTime(), posSpline.endTime(),
+                        posSpline.loopDuration());
+                else
+                    ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f),
+                        "%d keyframes  |  %.1f s  to  %.1f s",
+                        count, posSpline.startTime(), posSpline.endTime());
+            }
 
             ImGui::End();
             return changed;
@@ -281,12 +323,14 @@ namespace demo {
         void hide()   { m_bVisible = false;       }
         void toggle() { m_bVisible = !m_bVisible; }
         [[nodiscard]] bool isVisible() const { return m_bVisible; }
+        [[nodiscard]] bool isLooping() const { return m_bLoop;    }
 
     private:
-        bool m_bVisible       = false;
+        bool m_bVisible       = true;
         char m_savePath[256]  = "assets/camera_spline.bin";
         char m_statusMsg[128] = {};
         bool m_statusOk       = true;
+        bool m_bLoop          = false;  // appended last to preserve layout
 
         // -----------------------------------------------------------------------
         // snapCameraToStart
@@ -310,11 +354,23 @@ namespace demo {
 
         // -----------------------------------------------------------------------
         // saveToFile
+        //
+        // Binary layout:
+        //   [4 bytes]  uint32_t   N
+        //   [N * 28]   keyframes  (time, pos.xyz, target.xyz)
+        //   [1 byte]   uint8_t    loop flag
         // -----------------------------------------------------------------------
         static bool saveToFile(const Spline<float3>& posSpline,
                                const Spline<float3>& targetSpline,
-                               const char* path)
+                               const char* path,
+                               const bool bLoop)
         {
+            // Remove the old file first so there is no stale data left over
+            // if the new file is shorter than the previous one.
+            // "wb" truncates on open, but an explicit remove guarantees the
+            // filesystem has no cached remnants of the old content.
+            ::remove(path);
+
             FILE* f = fopen(path, "wb");
             if (!f) return false;
 
@@ -336,16 +392,27 @@ namespace demo {
                 fwrite(data, sizeof(float), 7, f);
             }
 
+            // Append loop flag at end (backward-compatible extension)
+            const uint8_t loopByte = bLoop ? 1 : 0;
+            fwrite(&loopByte, sizeof(uint8_t), 1, f);
+
+            // Flush the C runtime buffer to the OS before closing.
+            fflush(f);
             fclose(f);
             return true;
         }
 
         // -----------------------------------------------------------------------
         // loadFromFile
+        //
+        // Reads the binary format.  The loop flag byte at the end is optional
+        // for backward compatibility: if the file has exactly 4 + N*28 bytes,
+        // the flag is absent and defaults to false.
         // -----------------------------------------------------------------------
         static bool loadFromFile(Spline<float3>& posSpline,
                                  Spline<float3>& targetSpline,
-                                 const char* path)
+                                 const char* path,
+                                 bool& outLoop)
         {
             FILE* f = fopen(path, "rb");
             if (!f) return false;
@@ -388,6 +455,14 @@ namespace demo {
             // here ensures endTime() and findSegment() work correctly.
             posSpline.sortByTime();
             targetSpline.sortByTime();
+
+            // Try to read the loop flag (appended at end).
+            // If absent (old file format), default to false.
+            uint8_t loopByte = 0;
+            if (fread(&loopByte, sizeof(uint8_t), 1, f) == 1)
+                outLoop = (loopByte != 0);
+            else
+                outLoop = false;
 
             fclose(f);
             return true;

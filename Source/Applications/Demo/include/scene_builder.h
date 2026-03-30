@@ -61,7 +61,7 @@ namespace demo {
     constexpr uint  k_spheresPerRow = 7;
     constexpr uint  k_rowXStart     = 110;
     constexpr uint  k_rowXStep      = 48;
-    constexpr float k_sphereRadius  = 10.0f / 512.0f;
+    constexpr float k_sphereRadius  = 8.0f / 512.0f;
 
     // Row 0: all opaque non-metallic -- cheap to shade, good for DoF background
     //   8(ceramic), 3(rough plastic), 4(glossy plastic), 0(diffuse), 9(rubber), 4(glossy), 3(rough)
@@ -227,6 +227,66 @@ namespace demo {
             const int wy = k_cubeCY + dj;
             const int wz = k_cubeCZ + dk;
             blas.set(wx, wy, wz, k_voxBrushed);
+        }
+    }
+
+    // =========================================================================
+    // buildThousandSpheres
+    //
+    // Procedurally places ~1000 small spheres across the theatre floor.
+    // Uses a simple grid layout with random jitter per sphere to avoid
+    // a perfectly uniform look.
+    // =========================================================================
+    inline void buildThousandSpheres(rt::primitives::AnalyticScene& analyticScene)
+    {
+        constexpr float inv = 1.0f / 512.0f;
+
+        // Floor bounds in voxel space (matching buildTheatreFloor)
+        constexpr float floorMin = 60.0f * inv;
+        constexpr float floorMax = 452.0f * inv;
+
+        // Grid dimensions: 32 x 32 = 1024 spheres (close to 1000)
+        constexpr int gridRes = 32;
+        constexpr float cellSize = (floorMax - floorMin) / static_cast<float>(gridRes);
+
+        constexpr float radius = 6.0f * inv;
+
+        // Material IDs to cycle through (from your material list in scene_builder.h)
+        // Picking only opaque, cheap-to-shade materials to keep perf reasonable.
+        constexpr uint matIds[] = { 0, 3, 4, 8, 9, 12, 13 };
+        constexpr uint matCount = sizeof(matIds) / sizeof(matIds[0]);
+
+        uint sphereIdx = 0;
+        for (int row = 0; row < gridRes; row++)
+        {
+            for (int col = 0; col < gridRes; col++)
+            {
+                rt::primitives::Sphere s;
+                s.m_radius = radius;
+
+                // Centre of the grid cell with a small deterministic offset
+                // using a simple hash to avoid needing <random>.
+                // Reference: Integer hash by Thomas Wang (1997):
+                //   https://burtleburtle.net/bob/hash/integer.html
+                uint hash = static_cast<uint>(row * 32 + col);
+                hash = (hash ^ 61u) ^ (hash >> 16u);
+                hash *= 9u;
+                hash = hash ^ (hash >> 4u);
+                hash *= 0x27d4eb2du;
+                hash = hash ^ (hash >> 15u);
+
+                const float jitterX = (static_cast<float>(hash & 0xFFu) / 255.0f - 0.5f) * cellSize * 0.4f;
+                const float jitterZ = (static_cast<float>((hash >> 8u) & 0xFFu) / 255.0f - 0.5f) * cellSize * 0.4f;
+
+                s.m_center.x = floorMin + (static_cast<float>(col) + 0.5f) * cellSize + jitterX;
+                s.m_center.y = radius;  // resting on floor
+                s.m_center.z = floorMin + (static_cast<float>(row) + 0.5f) * cellSize + jitterZ;
+
+                s.m_matIndex = matIds[sphereIdx % matCount];
+
+                analyticScene.addSphere(s);
+                sphereIdx++;
+            }
         }
     }
 
