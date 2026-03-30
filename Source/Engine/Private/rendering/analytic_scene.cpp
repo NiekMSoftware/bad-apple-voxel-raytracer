@@ -184,6 +184,12 @@ namespace rt::primitives
         const uint32_t idx = tbvhRay.hit.prim;
         const Sphere& s = m_aSpheres[idx];
         const float3 ip = ray.m_o + tbvhRay.hit.t * ray.m_d;
+        const float3 diff = ip - s.m_center;
+        const float len2 = dot(diff, diff);
+        if (len2 > 1e-12f)
+            hit.m_normal = diff * (1.0f / sqrtf(len2));
+        else
+            hit.m_normal = float3(0, 1, 0);  // fallback: safe arbitrary normal
 
         hit.m_t        = tbvhRay.hit.t;
         hit.m_normal   = normalize(ip - s.m_center);

@@ -1,6 +1,7 @@
 #include "rt/scene/scene.h"
 
 #include "brick_traverser.h"
+#include "cube_helpers.h"
 #include "dda.h"
 #include "tmpl8/template.h"
 #include "rt/rendering/material_manager.h"
@@ -91,12 +92,28 @@ namespace rt::scene {
 
         const float maxT = ray.m_t;
 
-        // 1. World BrickPool
-        worldDdaNearest(ray, m_pool.getMap());
+        // Test analytic scene first (cheap BVH traversal)
+        rt::primitives::HitInfo hit;
+        hit.m_t = ray.m_t;
+        if (m_analyticScene.intersect(ray, hit))
+        {
+            ray.m_t            = hit.m_t;
+            ray.m_voxel        = 0x40000000u;
+            ray.m_primNormal   = hit.m_normal;
+            ray.m_primMatIndex = hit.m_matIndex;
+            ray.m_primRadius   = hit.m_radius;
+        }
+
+        // 1. Only enter the voxel DDA if the world cube is closer than current best
+        const float worldEntry = worldEntryDist(ray);
+        if (worldEntry < ray.m_t)
+            worldDdaNearest(ray, m_pool.getMap());
+
 
         // 2. TLAS instances — no sphere guard needed here, Setup3DDDA handles misses
         for (const auto& inst : m_vInstances)
         {
+            if (!isRayValid(ray)) break;
             core::Ray testRay(ray);
             testRay.m_t = maxT;
             if (!inst->rayIntersectsSphere(testRay)) continue;
@@ -131,6 +148,7 @@ namespace rt::scene {
         // 3. Mesh BVH
         for (const auto& [m_vVertices, m_bvh] : m_vMeshes)
         {
+            if (!isRayValid(ray)) break;
             tinybvh::Ray tbvhRay(
                 tinybvh::bvhvec3(ray.m_o.x, ray.m_o.y, ray.m_o.z),
                 tinybvh::bvhvec3(ray.m_d.x, ray.m_d.y, ray.m_d.z),
@@ -144,7 +162,6 @@ namespace rt::scene {
         }
 
         // 4. Analytic scene
-        rt::primitives::HitInfo hit;
         hit.m_t = ray.m_t;
         if (m_analyticScene.intersect(ray, hit))
         {

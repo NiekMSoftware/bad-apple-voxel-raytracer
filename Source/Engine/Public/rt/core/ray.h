@@ -37,4 +37,10 @@ namespace rt::core {
 	    }
     };
 
+    inline bool isRayValid(const core::Ray& ray) {
+        return std::isfinite(ray.m_o.x) && std::isfinite(ray.m_o.y) && std::isfinite(ray.m_o.z)
+            && std::isfinite(ray.m_d.x) && std::isfinite(ray.m_d.y) && std::isfinite(ray.m_d.z)
+            && std::isfinite(ray.m_t);
+    }
+
 };

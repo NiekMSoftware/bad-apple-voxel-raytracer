@@ -39,7 +39,7 @@ namespace demo {
 
             // Drop position: centre stage, above the floor, between camera and audience
             const float3 startPos    = float3(256.0f * inv, 0.30f, 100.0f * inv);
-            const float  ballRadius  = 4.0f * inv;  // 8 voxels ≈ 0.0156 normalised
+            const float  ballRadius  = 8.0f * inv;
 
             // Visual sphere — rendered by the analytic scene's BVH
             rt::primitives::Sphere vis;
