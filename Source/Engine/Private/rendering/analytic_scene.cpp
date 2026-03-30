@@ -168,6 +168,10 @@ namespace rt::primitives
     {
         if (m_sphereCount == 0) return false;
 
+        if (!std::isfinite(ray.m_o.x) || !std::isfinite(ray.m_o.y) || !std::isfinite(ray.m_o.z) ||
+        !std::isfinite(ray.m_d.x) || !std::isfinite(ray.m_d.y) || !std::isfinite(ray.m_d.z))
+            return false;
+
         tinybvh::Ray tbvhRay(
             tinybvh::bvhvec3(ray.m_o.x, ray.m_o.y, ray.m_o.z),
             tinybvh::bvhvec3(ray.m_d.x, ray.m_d.y, ray.m_d.z),
@@ -193,6 +197,10 @@ namespace rt::primitives
     bool AnalyticScene::isOccluded(const core::Ray& ray) const
     {
         if (m_sphereCount == 0) return false;
+
+        if (!std::isfinite(ray.m_o.x) || !std::isfinite(ray.m_o.y) || !std::isfinite(ray.m_o.z) ||
+        !std::isfinite(ray.m_d.x) || !std::isfinite(ray.m_d.y) || !std::isfinite(ray.m_d.z))
+            return false;
 
         tinybvh::Ray tbvhRay(
             tinybvh::bvhvec3(ray.m_o.x, ray.m_o.y, ray.m_o.z),

@@ -261,16 +261,6 @@ namespace rt::scene {
             }
         }
 
-        // Meshes
-        for (const auto& mesh : m_vMeshes)
-        {
-            tinybvh::Ray tbvhRay(
-                tinybvh::bvhvec3(ray.m_o.x, ray.m_o.y, ray.m_o.z),
-                tinybvh::bvhvec3(ray.m_d.x, ray.m_d.y, ray.m_d.z),
-                ray.m_t);
-            if (mesh.m_bvh.IsOccluded(tbvhRay)) return true;
-        }
-
         if (m_analyticScene.isOccluded(ray)) return true;
         return false;
     }
@@ -361,16 +351,6 @@ namespace rt::scene {
                         return true;
                 if (!internal::advanceDda(s, axis)) break;
             }
-        }
-
-        // Meshes
-        for (const auto& mesh : m_vMeshes)
-        {
-            tinybvh::Ray tbvhRay(
-                tinybvh::bvhvec3(ray.m_o.x, ray.m_o.y, ray.m_o.z),
-                tinybvh::bvhvec3(ray.m_d.x, ray.m_d.y, ray.m_d.z),
-                ray.m_t);
-            if (mesh.m_bvh.IsOccluded(tbvhRay)) return true;
         }
 
         rt::primitives::HitInfo hit;
