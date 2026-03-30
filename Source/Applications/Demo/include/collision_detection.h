@@ -2,6 +2,7 @@
 #include "tmpl8/template.h"
 #include "rt/scene/scene.h"
 #include "rt/core/ray.h"
+#include "rt/rendering/primitives/hit_info.h"
 
 namespace demo
 {
@@ -26,14 +27,15 @@ namespace demo
         for (auto direction : directions)
         {
             rt::core::Ray ray(pos, direction, radius);
-            scene.findNearest(ray);
+            rt::primitives::HitInfo hitInfo{};
+            scene.findNearest(ray, hitInfo);
 
             // Skip self-intersection: the physics sphere is in the analytic
             // scene, so rays from its centre hit its own surface at t ≈ radius.
             // Any real collision with the environment will be at t < radius
             // AND not near t ≈ radius (the sphere's own shell).
             if (ray.m_t >= radius) continue;
-            if (ray.m_voxel == 0x40000000u && ray.m_primMatIndex == 12) continue;  // only skip gold spheres (dirty code but hey, it works)
+            if (ray.m_voxel == 0x40000000u && hitInfo.m_matIndex == 12) continue;  // only skip gold spheres (dirty code but hey, it works)
             outNormal += ray.getNormal();
             outDepth = max(outDepth, radius - ray.m_t);
             hit = true;
@@ -42,7 +44,8 @@ namespace demo
         if (length(velocity) > 0.001f)
         {
             rt::core::Ray ray(pos, normalize(velocity), radius);
-            scene.findNearest(ray);
+            rt::primitives::HitInfo hitInfo{};
+            scene.findNearest(ray, hitInfo);
 
             if (ray.m_t <= radius && ray.m_voxel != 0x40000000u)
             {

@@ -7,6 +7,7 @@
 #include "rt/rendering/simd_utils.h"
 #include "rt/brdf/bsdf.h"
 #include "rt/rendering/bit_packer.h"
+#include "rt/rendering/primitives/hit_info.h"
 #include "tmpl8/tmpl8math.h"
 #include "tmpl8/template.h"
 
@@ -69,13 +70,14 @@ namespace rt::rendering {
     // =========================================================================
 
     BounceResult shadeDielectric(core::Ray& ray,
-                                  const float3&  I,
-                                  const float3&  N,
-                                  const float3&  V,
-                                  const Material& mat,
-                                  const float maxRayDist,
-                                  float3& throughput,
-                                  const ShadingServices& services)
+                                 const primitives::HitInfo& hitInfo,
+                                 const float3&  I,
+                                 const float3&  N,
+                                 const float3&  V,
+                                 const Material& mat,
+                                 const float maxRayDist,
+                                 float3& throughput,
+                                 const ShadingServices& services)
     {
         BounceResult result{};
         result.m_bContinue = true;
@@ -111,7 +113,7 @@ namespace rt::rendering {
         {
             // Save pre-bounce state for Beer-Lambert (volumetric absorption on exit)
             const float oldT          = ray.m_t;
-            const float oldPrimRadius = ray.m_primRadius;
+            const float oldPrimRadius = hitInfo.m_radius;
 
             ray = core::Ray(I - faceN * EPSILON, bs.m_wi, maxRayDist);
 
@@ -192,6 +194,7 @@ namespace rt::rendering {
     }
 
     BounceResult shadeHit(core::Ray& ray,
+                          const primitives::HitInfo& hitInfo,
                          const float maxRayDist,
                          float3& throughput,
                          const MaterialManager& matMgr,
@@ -200,13 +203,13 @@ namespace rt::rendering {
         // ---- Analytic primitive (sphere) ----
         if (ray.m_voxel == 0x40000000u)
         {
-            const Material& mat = matMgr.getMaterial(ray.m_primMatIndex);
+            const Material& mat = matMgr.getMaterial(hitInfo.m_matIndex);
             const float3 I = ray.intersectionPoint();
-            const float3 N = ray.m_primNormal;
+            const float3 N = hitInfo.m_normal;
             const float3 V = -ray.m_d;
 
             return (mat.m_transparency > 0.0f)
-                ? shadeDielectric(ray, I, N, V, mat, maxRayDist, throughput, services)
+                ? shadeDielectric(ray, hitInfo, I, N, V, mat, maxRayDist, throughput, services)
                 : shadeOpaqueSphere(ray, I, N, V, mat, maxRayDist, services);
         }
 
@@ -217,9 +220,9 @@ namespace rt::rendering {
         if ((ray.m_voxel & 0xE0000000u) == 0x20000000u)
         {
             const float3 I = ray.intersectionPoint();
-            const float3 N = ray.m_primNormal;
+            const float3 N = hitInfo.m_normal;
             const float3 V = -ray.m_d;
-            const Material& material = matMgr.getMaterial(ray.m_primMatIndex);
+            const Material& material = matMgr.getMaterial(hitInfo.m_matIndex);
 
             BounceResult result{};
             result.m_color = services.m_lightManager.calculateLighting(

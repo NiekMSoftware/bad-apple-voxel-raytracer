@@ -4,6 +4,10 @@
 #include "rt/rendering/material.h"
 #include "rt/rendering/config.h"
 
+namespace rt::primitives {
+    struct HitInfo;
+}
+
 namespace rt::rendering {
 
     // =========================================================================
@@ -22,6 +26,7 @@ namespace rt::rendering {
 
     // Dielectric (glass/water/diamond): stochastic reflect or refract
     [[nodiscard]] BounceResult shadeDielectric(core::Ray&             ray,
+                                               const primitives::HitInfo& hitInfo,
                                                const float3&          I,
                                                const float3&          N,
                                                const float3&          V,
@@ -66,6 +71,7 @@ namespace rt::rendering {
                                                 float primRadius);
 
     BounceResult shadeHit(core::Ray&             ray,
+                          const primitives::HitInfo&   hitInfo,
                           float                  maxRayDist,
                           float3&                throughput,
                           const MaterialManager& matMgr,

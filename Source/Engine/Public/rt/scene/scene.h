@@ -37,7 +37,7 @@ namespace rt::scene {
         ~Scene() = default;
 
         // Finds the nearest intersection along the ray (voxel, instance, or mesh).
-        void findNearest(core::Ray& ray) const;
+        void findNearest(core::Ray& ray, primitives::HitInfo& hitInfo) const;
 
         // Returns true if any geometry occludes the ray before ray.t.
         bool isOccluded(core::Ray& ray) const;

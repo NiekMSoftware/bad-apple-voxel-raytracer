@@ -11,9 +11,7 @@ namespace rt::core {
 	    float3 intersectionPoint() const { return m_o + m_t * m_d; }
 	    float3 getNormal() const;
 	    float3 getAlbedo() const;
-	    float GetReflectivity( const float3& I ) const; // TODO: implement
-	    float GetRefractivity( const float3& I ) const; // TODO: implement
-	    float3 GetAbsorption( const float3& I ) const; // TODO: implement
+
 	    // ray data
 	    float3 m_o;					// ray origin
 	    float3 m_rD;					// reciprocal ray direction
@@ -23,11 +21,6 @@ namespace rt::core {
 	    uint m_voxel;					// payload of the intersected voxel
 	    uint m_axis = 0;				// axis of last plane passed by the ray
 	    bool m_bInside = false;		// if true, ray started in voxel and t is at exit point
-
-        // Analytic primitive hit data (filled by AnalyticScene::Intersect)
-        float3 m_primNormal   = { 0, 0, 0 };
-        uint   m_primMatIndex = 0;
-        float  m_primRadius   = 0.0f;
 
     private:
 	    // min3 is used in normal reconstruction.

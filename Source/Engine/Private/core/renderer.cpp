@@ -2,6 +2,7 @@
 
 #include "rt/rendering/shading.h"
 #include "rt/rendering/simd_utils.h"
+#include "rt/rendering/primitives/hit_info.h"
 #include "tmpl8/template.h"
 
 // ============================================================================
@@ -150,6 +151,7 @@ namespace rt::core {
     {
         float3 color{0};
         float3 throughput{1.0f};
+        primitives::HitInfo hitInfo{};
 
         for (int bounce = 0; bounce < rendering::config::g_kMaxDepth; bounce++)
         {
@@ -159,7 +161,7 @@ namespace rt::core {
             }
 
             ray.m_t = fminf(ray.m_t, maxRayDist);
-            m_scene.findNearest(ray);
+            m_scene.findNearest(ray, hitInfo);
 
             if (bounce == 0 && primaryDepthOut)
                 *primaryDepthOut = (ray.m_voxel != 0) ? ray.m_t : LARGE_FLOAT;
@@ -170,7 +172,7 @@ namespace rt::core {
             }
 
             const auto [m_color, m_throughputScale, m_bContinue] = rendering::shadeHit(
-                ray, maxRayDist, throughput, m_materialManager, m_shadingServices);
+                ray, hitInfo, maxRayDist, throughput, m_materialManager, m_shadingServices);
 
             color += throughput * m_color;
             if (!m_bContinue) break;

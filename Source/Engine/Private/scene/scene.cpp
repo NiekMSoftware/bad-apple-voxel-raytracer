@@ -86,7 +86,7 @@ namespace rt::scene {
     // =========================================================================
     // findNearest
     // =========================================================================
-    void Scene::findNearest(core::Ray& ray) const
+    void Scene::findNearest(core::Ray& ray, primitives::HitInfo& hitInfo) const
     {
         ray.m_o += EPSILON * ray.m_d;
 
@@ -99,9 +99,9 @@ namespace rt::scene {
         {
             ray.m_t            = hit.m_t;
             ray.m_voxel        = 0x40000000u;
-            ray.m_primNormal   = hit.m_normal;
-            ray.m_primMatIndex = hit.m_matIndex;
-            ray.m_primRadius   = hit.m_radius;
+            hitInfo.m_normal   = hit.m_normal;
+            hitInfo.m_matIndex = hit.m_matIndex;
+            hitInfo.m_radius   = hit.m_radius;
         }
 
         // 1. Only enter the voxel DDA if the world cube is closer than current best
@@ -140,8 +140,8 @@ namespace rt::scene {
             if (lr.m_t >= ray.m_t) continue;
 
             ray.m_t            = lr.m_t;
-            ray.m_primNormal   = inst->transformNormalToWorld(lr.getNormal());
-            ray.m_primMatIndex = lr.m_voxel >> 24;
+            hitInfo.m_normal   = hit.m_normal;
+            hitInfo.m_matIndex = lr.m_voxel >> 24;
             ray.m_voxel        = k_instanceVoxelSentinel | (lr.m_voxel & 0x00FFFFFFu);
         }
 
@@ -167,9 +167,9 @@ namespace rt::scene {
         {
             ray.m_t            = hit.m_t;
             ray.m_voxel        = 0x40000000u;
-            ray.m_primNormal   = hit.m_normal;
-            ray.m_primMatIndex = hit.m_matIndex;
-            ray.m_primRadius   = hit.m_radius;
+            hitInfo.m_normal   = hit.m_normal;
+            hitInfo.m_matIndex = hit.m_matIndex;
+            hitInfo.m_radius   = hit.m_radius;
         }
     }
 

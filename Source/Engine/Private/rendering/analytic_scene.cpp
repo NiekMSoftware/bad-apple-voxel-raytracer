@@ -195,7 +195,6 @@ namespace rt::primitives
         hit.m_normal   = normalize(ip - s.m_center);
         hit.m_matIndex = s.m_matIndex;
         hit.m_radius   = s.m_radius;
-        hit.m_center   = s.m_center;
 
         return true;
     }
