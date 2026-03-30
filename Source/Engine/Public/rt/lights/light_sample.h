@@ -18,6 +18,7 @@ namespace rt::lights {
         const float3& I,
         const float3& N,
         const float3& V,
+        const brdf::TangentFrame& frame,
         const rendering::Material& mat,
         const scene::Scene& scene,
         const rendering::MaterialManager& matMgr)
@@ -25,13 +26,17 @@ namespace rt::lights {
         // early out for zero-radiance samples
         if (!sample.m_bIsValid) return {0};
 
+        // Early-out: light is behind the surface
+        const float NdotL = dot(N, sample.m_direction);
+        if (NdotL <= 0.0f) return {0};
+
+        // BSDF evaluation
+        brdf::ShadingContext ctx = brdf::ShadingContext::create(frame, V, sample.m_direction);
+        if (ctx.isBackFace()) return {0};
+
         // Shadow test
         core::Ray shadowRay(I + N * EPSILON, sample.m_direction, sample.m_distance);
         if (scene.isOccluded(shadowRay, matMgr)) return {0};
-
-        // BSDF evaluation
-        brdf::TangentFrame frame = brdf::TangentFrame::fromNormal(N);
-        brdf::ShadingContext ctx = brdf::ShadingContext::create(frame, V, sample.m_direction);
 
         const float3 bsdf = bsdf::evaluate(ctx, mat);
         return bsdf * sample.m_intensity * ctx.m_nDotL;

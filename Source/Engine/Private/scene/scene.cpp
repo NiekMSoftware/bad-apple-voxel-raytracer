@@ -29,6 +29,13 @@ namespace rt::scene {
     //
     // Separated so the inside/outside paths are plain if/else with no jumps.
     // Returns true if the DDA found a hit and wrote ray.m_voxel / ray.m_t.
+    //
+    // Super-grid acceleration is NOT used here because findNearest
+    // requires correct ray.m_axis for normal reconstruction (getNormal).
+    // Setup3DDDAAt does not correctly propagate the entry axis when
+    // the fine DDA starts mid-ray, corrupting normals. The isOccluded
+    // paths don't have this problem — they only return true/false and
+    // never read ray.m_axis.
     // =========================================================================
     static bool worldDdaNearest(core::Ray& ray, const BrickMap* map)
     {
@@ -151,25 +158,84 @@ namespace rt::scene {
 
     // =========================================================================
     // isOccluded (no material check)
+    //
+    // Uses a two-tier fast path before falling back to the full fine DDA:
+    //
+    //   1. Y-slice check: if the ray travels purely upward (or downward)
+    //      and all Y-slices in that direction are empty, the world DDA
+    //      is skipped entirely.  Cost: one 64-bit mask test.
+    //
+    //   2. Super-grid DDA (8^3): steps through the coarse grid and only
+    //      enters the fine 64^3 DDA within occupied super-cells.  For
+    //      shadow rays traversing mostly empty space this reduces the
+    //      step count from ~64 to ~8.
+    //
+    // Reference (super-grid skip):
+    //   "A Rundown on Brickmaps" — uygarb.dev
+    //   VoxelRT MultiDDA — github.com/dubiousconst282/VoxelRT
     // =========================================================================
     bool Scene::isOccluded(core::Ray& ray) const
     {
         ray.m_o += EPSILON * ray.m_d;
         ray.m_t -= EPSILON * 2.0f;
 
-        // World DDA
+        const BrickMap* map = m_pool.getMap();
+
+        // World DDA with super-grid acceleration
         {
-            internal::DDAState s{};
-            const BrickMap* map = m_pool.getMap();
-            if (internal::Setup3DDDA(map, ray, s))
+            // --- Tier 1: Y-slice early-out ---
+            // If the ray travels upward/downward and there is no geometry
+            // in any Y-slice along its path, the entire world DDA is skipped.
+            bool skipWorldDda = false;
             {
-                uint axis = s.m_axis, brickIdx; float3 brickOrigin{};
-                while (s.m_t < ray.m_t)
+                // Determine the outer-grid Y of the ray origin (clamped to grid)
+                const float entryY = clamp(ray.m_o.y, 0.0f, 1.0f - VOXELSIZE);
+                const uint  originY = static_cast<uint>(entryY * GRIDSIZE);
+
+                if (ray.m_d.y > 0.0f)
+                    skipWorldDda = map->allYSlicesAboveEmpty(originY);
+                else if (ray.m_d.y < 0.0f)
+                    skipWorldDda = map->allYSlicesBelowEmpty(originY);
+                // For perfectly horizontal rays (m_d.y == 0) we cannot skip.
+            }
+
+            if (!skipWorldDda)
+            {
+                // --- Tier 2: super-grid DDA (8^3) into fine-grid DDA (64^3) ---
+                internal::SuperDDAState ss{};
+                if (internal::setupSuperDda(ray, ss))
                 {
-                    if (internal::GetBrickInfo(map, s.m_x, s.m_y, s.m_z, brickIdx, brickOrigin))
-                        if (internal::Occluded(ray, map, brickIdx, brickOrigin, s.m_t))
-                            return true;
-                    if (!internal::advanceDda(s, axis)) break;
+                    uint superAxis = ss.m_axis;
+                    while (ss.m_t < ray.m_t)
+                    {
+                        const uint superIdx = ss.m_x + ss.m_y * SUPERGRIDSIZE + ss.m_z * SUPERGRIDSIZE2;
+                        if (map->isSuperOccupied(superIdx))
+                        {
+                            internal::DDAState s{};
+                            internal::Setup3DDDAAt(map, ray, s, ss.m_t);
+
+                            const uint fineMinX = ss.m_x * 8, fineMaxX = fineMinX + 8;
+                            const uint fineMinY = ss.m_y * 8, fineMaxY = fineMinY + 8;
+                            const uint fineMinZ = ss.m_z * 8, fineMaxZ = fineMinZ + 8;
+
+                            uint axis = s.m_axis;
+                            uint brickIdx; float3 brickOrigin{};
+
+                            while (s.m_t < ray.m_t)
+                            {
+                                if (s.m_x < fineMinX || s.m_x >= fineMaxX ||
+                                    s.m_y < fineMinY || s.m_y >= fineMaxY ||
+                                    s.m_z < fineMinZ || s.m_z >= fineMaxZ)
+                                    break;
+
+                                if (internal::GetBrickInfo(map, s.m_x, s.m_y, s.m_z, brickIdx, brickOrigin))
+                                    if (internal::Occluded(ray, map, brickIdx, brickOrigin, s.m_t))
+                                        return true;
+                                if (!internal::advanceDda(s, axis)) break;
+                            }
+                        }
+                        if (!internal::advanceSuperDda(ss, superAxis)) break;
+                    }
                 }
             }
         }
@@ -181,15 +247,15 @@ namespace rt::scene {
 
             core::Ray lr = inst->transformRayToLocal(ray);
             internal::DDAState s{};
-            const BrickMap* map = inst->m_blas.getMap();
-            if (!internal::Setup3DDDA(map, lr, s)) continue;
+            const BrickMap* map2 = inst->m_blas.getMap();
+            if (!internal::Setup3DDDA(map2, lr, s)) continue;
             if (lr.m_bInside) continue;   // ray started inside this instance — skip self-shadow
 
             uint axis = s.m_axis, brickIdx; float3 brickOrigin{};
             while (s.m_t < lr.m_t)
             {
-                if (internal::GetBrickInfo(map, s.m_x, s.m_y, s.m_z, brickIdx, brickOrigin))
-                    if (internal::Occluded(lr, map, brickIdx, brickOrigin, s.m_t))
+                if (internal::GetBrickInfo(map2, s.m_x, s.m_y, s.m_z, brickIdx, brickOrigin))
+                    if (internal::Occluded(lr, map2, brickIdx, brickOrigin, s.m_t))
                         return true;
                 if (!internal::advanceDda(s, axis)) break;
             }
@@ -211,25 +277,67 @@ namespace rt::scene {
 
     // =========================================================================
     // isOccluded (with material transparency)
+    //
+    // Same Y-slice + super-grid acceleration as the simple overload.
     // =========================================================================
     bool Scene::isOccluded(core::Ray& ray, const rt::rendering::MaterialManager& materials) const
     {
         ray.m_o += EPSILON * ray.m_d;
         ray.m_t -= EPSILON * 2.0f;
 
-        // World DDA
+        const BrickMap* map = m_pool.getMap();
+
+        // World DDA with super-grid acceleration
         {
-            internal::DDAState s{};
-            const BrickMap* map = m_pool.getMap();
-            if (internal::Setup3DDDA(map, ray, s))
+            // --- Tier 1: Y-slice early-out ---
+            bool skipWorldDda = false;
             {
-                uint axis = s.m_axis, brickIdx; float3 brickOrigin{};
-                while (s.m_t < ray.m_t)
+                const float entryY = clamp(ray.m_o.y, 0.0f, 1.0f - VOXELSIZE);
+                const uint  originY = static_cast<uint>(entryY * GRIDSIZE);
+
+                if (ray.m_d.y > 0.0f)
+                    skipWorldDda = map->allYSlicesAboveEmpty(originY);
+                else if (ray.m_d.y < 0.0f)
+                    skipWorldDda = map->allYSlicesBelowEmpty(originY);
+            }
+
+            if (!skipWorldDda)
+            {
+                // --- Tier 2: super-grid DDA ---
+                internal::SuperDDAState ss{};
+                if (internal::setupSuperDda(ray, ss))
                 {
-                    if (internal::GetBrickInfo(map, s.m_x, s.m_y, s.m_z, brickIdx, brickOrigin))
-                        if (internal::Occluded(ray, map, brickIdx, brickOrigin, s.m_t))
-                            return true;
-                    if (!internal::advanceDda(s, axis)) break;
+                    uint superAxis = ss.m_axis;
+                    while (ss.m_t < ray.m_t)
+                    {
+                        const uint superIdx = ss.m_x + ss.m_y * SUPERGRIDSIZE + ss.m_z * SUPERGRIDSIZE2;
+                        if (map->isSuperOccupied(superIdx))
+                        {
+                            internal::DDAState s{};
+                            internal::Setup3DDDAAt(map, ray, s, ss.m_t);
+
+                            const uint fineMinX = ss.m_x * 8, fineMaxX = fineMinX + 8;
+                            const uint fineMinY = ss.m_y * 8, fineMaxY = fineMinY + 8;
+                            const uint fineMinZ = ss.m_z * 8, fineMaxZ = fineMinZ + 8;
+
+                            uint axis = s.m_axis;
+                            uint brickIdx; float3 brickOrigin{};
+
+                            while (s.m_t < ray.m_t)
+                            {
+                                if (s.m_x < fineMinX || s.m_x >= fineMaxX ||
+                                    s.m_y < fineMinY || s.m_y >= fineMaxY ||
+                                    s.m_z < fineMinZ || s.m_z >= fineMaxZ)
+                                    break;
+
+                                if (internal::GetBrickInfo(map, s.m_x, s.m_y, s.m_z, brickIdx, brickOrigin))
+                                    if (internal::Occluded(ray, map, brickIdx, brickOrigin, s.m_t))
+                                        return true;
+                                if (!internal::advanceDda(s, axis)) break;
+                            }
+                        }
+                        if (!internal::advanceSuperDda(ss, superAxis)) break;
+                    }
                 }
             }
         }
@@ -241,15 +349,15 @@ namespace rt::scene {
 
             core::Ray lr = inst->transformRayToLocal(ray);
             internal::DDAState s{};
-            const BrickMap* map = inst->m_blas.getMap();
-            if (!internal::Setup3DDDA(map, lr, s)) continue;
+            const BrickMap* map2 = inst->m_blas.getMap();
+            if (!internal::Setup3DDDA(map2, lr, s)) continue;
             if (lr.m_bInside) continue;   // ray started inside this instance — skip self-shadow
 
             uint axis = s.m_axis, brickIdx; float3 brickOrigin{};
             while (s.m_t < lr.m_t)
             {
-                if (internal::GetBrickInfo(map, s.m_x, s.m_y, s.m_z, brickIdx, brickOrigin))
-                    if (internal::Occluded(lr, map, brickIdx, brickOrigin, s.m_t))
+                if (internal::GetBrickInfo(map2, s.m_x, s.m_y, s.m_z, brickIdx, brickOrigin))
+                    if (internal::Occluded(lr, map2, brickIdx, brickOrigin, s.m_t))
                         return true;
                 if (!internal::advanceDda(s, axis)) break;
             }

@@ -16,12 +16,12 @@ namespace rt::rendering {
     namespace config {
         constexpr float g_kBaseSecondaryDist             = 0.15f;
         constexpr int   g_kMaxSpp                        = 4096;
-        constexpr int   g_kMaxDepth                      = 8;
+        constexpr int   g_kMaxDepth                      = 4;
         constexpr int   g_kRussianRouletteMinBounce      = 2;
         constexpr float g_kMinThroughput                 = 0.01f;
         constexpr float g_kIblWeight                     = 0.5f;
-        constexpr float g_kIblRussianRouletteProbability = 1.0f;
-        constexpr float g_kReflectionRoughnessThreshold  = 0.3f;
+        constexpr float g_kIblRussianRouletteProbability = 0.5f;
+        constexpr float g_kReflectionRoughnessThreshold  = 0.15f;
     }
 
     // =========================================================================

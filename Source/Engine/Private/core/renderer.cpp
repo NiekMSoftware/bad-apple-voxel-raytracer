@@ -384,7 +384,7 @@ namespace rt::core {
                 if (historySample.x == 0.0f && historySample.y == 0.0f && historySample.z == 0.0f)
                     historySample = sample;
 
-            m_pAccumulator[idx] = w * historySample + (1.0f - w) * sample;
+                m_pAccumulator[idx] = w * historySample + (1.0f - w) * sample;
             }
         }
 

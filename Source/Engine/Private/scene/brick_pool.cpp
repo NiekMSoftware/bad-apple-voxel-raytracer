@@ -85,6 +85,15 @@ namespace rt::scene {
             const uint bi = m_pMap->m_brickCount++;
             gridVal = (bi << 1) | 1;  // store brick index + occupied flag
             m_pMap->setOccupied(cellIdx);
+
+            // Update super-grid occupancy:
+            // Each super-cell covers 8x8x8 outer grid cells.
+            const uint sx = bx / 8, sy = by / 8, sz = bz / 8;
+            const uint superIdx = sx + sy * SUPERGRIDSIZE + sz * SUPERGRIDSIZE2;
+            m_pMap->setSuperOccupied(superIdx);
+
+            // Update Y-slice occupancy
+            m_pMap->setYSliceOccupied(by);
         }
 
         const uint bi  = gridVal >> 1;

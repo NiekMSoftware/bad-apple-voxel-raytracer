@@ -52,6 +52,13 @@ namespace rt::scene::internal {
     // Returns false if the ray misses the world cube entirely.
     bool Setup3DDDA(const BrickMap* map, core::Ray& ray, DDAState& state);
 
+    // Overload: initialise the fine DDA starting at a caller-supplied t.
+    // Used by the super-grid accelerated paths so the fine DDA begins
+    // at the super-cell entry point instead of the ray origin.
+    // Does NOT perform the inside-solid check (caller handles that).
+    bool Setup3DDDAAt(const BrickMap* map, const core::Ray& ray,
+                      DDAState& state, float entryT);
+
     // Nearest-hit traversal inside one brick using the inner DDA.
     //
     // Normal mode (insideMode = false):

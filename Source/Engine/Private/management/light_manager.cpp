@@ -50,6 +50,9 @@ namespace rt::management {
 
         if (total == 0) return {0};
 
+        // Build tangent frame once for this shading point
+        const brdf::TangentFrame frame = brdf::TangentFrame::fromNormal(N);
+
         // When accumulating: sample one light, scale by total (1/pdf = total).
         // Variance is averaged out over frames by the accumulator.
         // When not accumulating (camera moving): sample all lights for a stable image.
@@ -67,15 +70,15 @@ namespace rt::management {
             else
                 s = m_spotLights[pick - nDir - nPt].sample(I);
 
-            return lights::evaluate(s, I, N, V, material, scene, matMgr)
+            return lights::evaluate(s, I, N, V, frame, material, scene, matMgr)
                    * static_cast<float>(total);
         }
 
         // Full loop — no noise when not accumulating
         float3 result{0};
-        for (const auto& l : m_dirLights)  { result += lights::evaluate(l.sample(I),  I, N, V, material, scene, matMgr); }
-        for (const auto& l : m_ptLights)   { result += lights::evaluate(l.sample(I),  I, N, V, material, scene, matMgr); }
-        for (const auto& l : m_spotLights) { result += lights::evaluate(l.sample(I),  I, N, V, material, scene, matMgr); }
+        for (const auto& l : m_dirLights)  { result += lights::evaluate(l.sample(I),  I, N, V, frame, material, scene, matMgr); }
+        for (const auto& l : m_ptLights)   { result += lights::evaluate(l.sample(I),  I, N, V, frame, material, scene, matMgr); }
+        for (const auto& l : m_spotLights) { result += lights::evaluate(l.sample(I),  I, N, V, frame, material, scene, matMgr); }
         return result;
     }
 

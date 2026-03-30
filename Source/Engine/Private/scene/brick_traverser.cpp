@@ -68,6 +68,39 @@ namespace rt::scene::internal {
         return true;
     }
 
+    // --------------------------------------------------------
+    // Setup3DDDAAt — initialise the fine DDA at an arbitrary t
+    //
+    // Identical to Setup3DDDA except:
+    //   - entryT is supplied by the caller (from the super-grid
+    //     DDA) instead of being computed from a cube intersection.
+    //   - No inside-solid check — the super-grid path handles
+    //     the inside case separately before calling this.
+    //   - The ray is taken by const-ref since we don't write
+    //     m_bInside.
+    //
+    // The entry point (ray.m_o + entryT * ray.m_d) must lie
+    // within or on the boundary of the unit cube [0,1]^3.
+    // --------------------------------------------------------
+    bool Setup3DDDAAt(const BrickMap* /*map*/, const core::Ray& ray,
+                      DDAState& state, const float entryT)
+    {
+        state.m_t    = entryT;
+        state.m_step = make_int3(1.0f - ray.m_dsign * 2.0f);
+
+        // Compute the grid position at the entry point (not the ray origin)
+        const float3 posInGrid  = static_cast<float>(GRIDSIZE) * (ray.m_o + (entryT + 0.00005f) * ray.m_d);
+        const float3 gridPlanes = (ceilf(posInGrid) - ray.m_dsign) * CELLSIZE;
+        const int3   P          = clamp(make_int3(posInGrid), 0, GRIDSIZE - 1);
+
+        state.m_x      = P.x; state.m_y = P.y; state.m_z = P.z;
+        state.m_tDelta = CELLSIZE * float3(state.m_step) * ray.m_rD;
+        state.m_tmax   = (gridPlanes - ray.m_o) * ray.m_rD;
+        state.m_axis   = ray.m_axis;
+
+        return true;
+    }
+
     bool Nearest(core::Ray& ray, const BrickMap* map,
                  const uint brickIdx, const float3 brickOrigin,
                  const float entryT, uint& axis, const bool insideMode)

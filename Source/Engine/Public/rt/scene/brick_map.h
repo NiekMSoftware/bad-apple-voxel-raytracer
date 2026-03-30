@@ -26,6 +26,14 @@
 #define VOXELSIZE             (1.0f / WORLDSIZE)
 #define INITIAL_BRICK_CAPACITY (GRIDSIZE3 / 16)
 
+// Super-grid: groups of 8x8x8 outer cells for coarse space-skipping.
+// The DDA can step through this 8^3 grid first and only descend into
+// the fine 64^3 grid when a super-cell is occupied.
+#define SUPERGRIDSIZE   (GRIDSIZE / 8)          // = 8
+#define SUPERGRIDSIZE2  (SUPERGRIDSIZE * SUPERGRIDSIZE)
+#define SUPERGRIDSIZE3  (SUPERGRIDSIZE * SUPERGRIDSIZE * SUPERGRIDSIZE)
+#define SUPERCELLSIZE   (1.0f / SUPERGRIDSIZE)
+
 #define EPSILON     0.00001f
 
 namespace rt::scene {
@@ -66,6 +74,29 @@ namespace rt::scene {
 
         uint32_t m_aOccupancy[GRIDSIZE3 / 32 + 1]{};
 
+        // ============================================================
+        // Super-grid occupancy — 8^3 = 512 cells, 1 bit each.
+        // Each super-cell covers 8x8x8 outer grid cells.
+        // Allows the DDA to skip large empty regions in ~8 steps
+        // instead of ~64.
+        //
+        // Memory: 512 / 8 = 64 bytes — fits in a single cache line.
+        // ============================================================
+        uint32_t m_aSuperOccupancy[SUPERGRIDSIZE3 / 32 + 1]{};
+
+        // ============================================================
+        // Y-slice occupancy — 1 bit per Y-level of the outer grid.
+        // Bit y is set if ANY outer cell at row y is occupied.
+        //
+        // Shadow rays going upward from the floor (Y=0) can check
+        // this single 64-bit value to skip the entire world DDA
+        // when all Y-slices above the ray origin are empty.
+        //
+        // Memory: 8 bytes.
+        // ============================================================
+        uint64_t m_ySliceOccupancy = 0;
+
+        // --- Fine-grid occupancy (existing) ---
         void setOccupied(const uint32_t idx)
         {
             m_aOccupancy[idx >> 5] |= (1u << (idx & 31));
@@ -74,6 +105,46 @@ namespace rt::scene {
         bool isOccupied(const uint32_t idx) const
         {
             return (m_aOccupancy[idx >> 5] >> (idx & 31)) & 1u;
+        }
+
+        // --- Super-grid occupancy ---
+        void setSuperOccupied(const uint32_t superIdx)
+        {
+            m_aSuperOccupancy[superIdx >> 5] |= (1u << (superIdx & 31));
+        }
+
+        bool isSuperOccupied(const uint32_t superIdx) const
+        {
+            return (m_aSuperOccupancy[superIdx >> 5] >> (superIdx & 31)) & 1u;
+        }
+
+        // --- Y-slice occupancy ---
+        void setYSliceOccupied(const uint32_t y)
+        {
+            m_ySliceOccupancy |= (1ULL << y);
+        }
+
+        bool isYSliceEmpty(const uint32_t y) const
+        {
+            return !(m_ySliceOccupancy & (1ULL << y));
+        }
+
+        // Returns true if ALL Y-slices strictly above 'y' are empty.
+        // Used by shadow rays heading upward to skip the entire world DDA.
+        bool allYSlicesAboveEmpty(const uint32_t y) const
+        {
+            if (y >= GRIDSIZE - 1) return true;        // already at top
+            const uint64_t aboveMask = ~((1ULL << (y + 1)) - 1);
+            return (m_ySliceOccupancy & aboveMask) == 0;
+        }
+
+        // Returns true if ALL Y-slices strictly below 'y' are empty.
+        // Used by shadow rays heading downward.
+        bool allYSlicesBelowEmpty(const uint32_t y) const
+        {
+            if (y == 0) return true;
+            const uint64_t belowMask = (1ULL << y) - 1;
+            return (m_ySliceOccupancy & belowMask) == 0;
         }
     };
 
