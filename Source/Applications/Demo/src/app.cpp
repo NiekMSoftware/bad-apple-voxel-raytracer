@@ -89,6 +89,25 @@ namespace demo {
         else
             m_badApple.update(m_renderer.getScene(), deltaTime);
 
+        // --- Accumulate on pause, stop on resume ---
+        {
+            const bool isPlaying = m_badApple.isPlaying();
+
+            // Transition: playing -> paused
+            if (m_bWasPlaying && !isPlaying)
+            {
+                m_renderer.setAccumulation(true);
+                m_renderer.resetAccumulator();  // start fresh accumulation
+            }
+            // Transition: paused -> playing
+            else if (!m_bWasPlaying && isPlaying)
+            {
+                m_renderer.setAccumulation(false);
+            }
+
+            m_bWasPlaying = isPlaying;
+        }
+
         // consumeRestart is still needed so the camera snaps back correctly
         // when the video loops -- getPlaybackTime() returns 0 after a loop
         // but we want to guarantee the spline also resets instantly.

@@ -26,6 +26,18 @@
 
 namespace rt::bsdf {
 
+    // Returns true if the direction vector is finite and has non-negligible length.
+    //
+    // A zero-length direction causes normalize() inside tinybvh::Ray to compute
+    // 0/0 = NaN (IEEE 754-2008 §6.2). Once any ray component is NaN, all
+    // subsequent arithmetic propagates it (IEEE 754 §6.2: "operations on NaNs
+    // propagate NaN").
+    inline bool isValidDirection(const float3& d)
+    {
+        const float len2 = dot(d, d);
+        return std::isfinite(len2) && len2 > 1e-12f;
+    }
+
     // =========================================================================
     // evaluate()
     //
@@ -100,6 +112,7 @@ namespace rt::bsdf {
             if (reflect)
             {
                 result.m_wi       = D - 2.0f * dot(D, faceN) * faceN;
+                if (!isValidDirection(result.m_wi)) return result; // m_bIsValid stays false
                 result.m_value    = float3{1.0f};
                 result.m_pdf      = tir ? 1.0f : fresnel;
                 result.m_lobe     = LobeType::SpecularReflection;
@@ -109,6 +122,7 @@ namespace rt::bsdf {
             {
                 const float cosT = sqrtf(1.0f - sin2T);
                 result.m_wi       = eta * D + (eta * cosI - cosT) * faceN;
+                if (!isValidDirection(result.m_wi)) return result; // m_bIsValid stays false
                 result.m_value    = float3{1.0f};
                 result.m_pdf      = 1.0f - fresnel;
                 result.m_lobe     = LobeType::SpecularTransmission;
@@ -133,6 +147,7 @@ namespace rt::bsdf {
             const float3 f = brdf::fresnelSchlick(cosTheta, f0);
 
             result.m_wi       = D - 2.0f * dot(D, N) * N;
+            if (!isValidDirection(result.m_wi)) return result; // m_bIsValid stays false
             result.m_value    = f;
             result.m_pdf      = 1.0f;
             result.m_lobe     = LobeType::SpecularReflection;

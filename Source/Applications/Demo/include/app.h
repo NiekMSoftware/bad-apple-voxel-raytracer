@@ -41,6 +41,7 @@ namespace demo {
         demo::PhysicsManager m_physics;
         float m_physicsRelaunchTimer = 0.0f;
         uint m_physicsSphereIdx = 0;
+        bool m_bWasPlaying = false;     // tracks previous frame's playback state
     };
 
 }  // namespace demo

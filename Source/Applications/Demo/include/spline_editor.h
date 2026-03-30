@@ -326,7 +326,7 @@ namespace demo {
         [[nodiscard]] bool isLooping() const { return m_bLoop;    }
 
     private:
-        bool m_bVisible       = true;
+        bool m_bVisible       = false;
         char m_savePath[256]  = "assets/camera_spline.bin";
         char m_statusMsg[128] = {};
         bool m_statusOk       = true;
