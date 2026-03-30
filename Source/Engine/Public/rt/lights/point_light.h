@@ -35,6 +35,8 @@ namespace rt::lights {
             const float3 lightPos = accumulate ? getRandomPoint() : m_position;
             float3 toLight = lightPos - surfacePoint;
             const float distance = length(toLight);
+            if (distance < 1e-6f)
+                return { float3(0), float3(0), 0.0f, false };
             toLight = normalize(toLight);
 
             const float attenuation = 1.0f / (distance * distance);

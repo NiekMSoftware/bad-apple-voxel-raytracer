@@ -91,7 +91,11 @@ namespace rt::lights {
         {
             const float3 lightPos = accumulate ? getRandomPoint() : m_position;
 
-            const float3 lightToPoint = normalize(surfacePoint - lightPos);
+            const float3 diff = surfacePoint - lightPos;
+            const float diffLen = length(diff);
+            if (diffLen < 1e-6f)
+                return { float3(0), float3(0), 0.0f, false };
+            const float3 lightToPoint = diff / diffLen;
             const float alignment = dot(lightToPoint, m_direction);
 
             // Outside outer cone - zero radiance
@@ -106,6 +110,8 @@ namespace rt::lights {
 
             float3 toLight = lightPos - surfacePoint;
             const float distance = length(toLight);
+            if (distance < 1e-6f)
+                return { float3(0), float3(0), 0.0f, false };
             toLight = normalize(toLight);
 
             const float attenuation = coneFalloff / (distance * distance);

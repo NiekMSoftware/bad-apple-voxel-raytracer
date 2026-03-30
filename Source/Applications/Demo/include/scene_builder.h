@@ -61,7 +61,7 @@ namespace demo {
     constexpr uint  k_spheresPerRow = 7;
     constexpr uint  k_rowXStart     = 110;
     constexpr uint  k_rowXStep      = 48;
-    constexpr float k_sphereRadius  = 8.0f / 512.0f;
+    constexpr float k_sphereRadius  = 4.0f / 512.0f;
 
     // Row 0: all opaque non-metallic -- cheap to shade, good for DoF background
     //   8(ceramic), 3(rough plastic), 4(glossy plastic), 0(diffuse), 9(rubber), 4(glossy), 3(rough)
@@ -249,7 +249,7 @@ namespace demo {
         constexpr int gridRes = 32;
         constexpr float cellSize = (floorMax - floorMin) / static_cast<float>(gridRes);
 
-        constexpr float radius = 6.0f * inv;
+        constexpr float radius = 4.0f * inv;
 
         // Material IDs to cycle through (from your material list in scene_builder.h)
         // Picking only opaque, cheap-to-shade materials to keep perf reasonable.

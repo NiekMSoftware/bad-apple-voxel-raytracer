@@ -94,24 +94,29 @@ namespace rt::rendering {
                 services.m_bAccumulate);
         }
 
-        // Save pre-bounce state for Beer-Lambert (volumetric absorption on exit)
-        const float oldT          = ray.m_t;
-        const float oldPrimRadius = ray.m_primRadius;
-
         // BSDF lobe selection: reflection or transmission
         const bsdf::BSDFSample bs = bsdf::sample(V, N, mat, services.m_bAccumulate);
 
-        if (bs.m_bIsValid)
+        if (!bs.m_bIsValid)
         {
-            if (bs.m_lobe == bsdf::LobeType::SpecularReflection)
-                ray = core::Ray(biasedI, bs.m_wi, maxRayDist);
-            else {
-                ray = core::Ray(I - faceN * EPSILON, bs.m_wi, maxRayDist);
+            result.m_bContinue = false;
+            return result;
+        }
 
-                // Beer-lambert absorption when exiting a medium
-                if (!entering)
-                    throughput *= beerLambertAbsorption(mat.m_baseColor, oldT, oldPrimRadius);
-            }
+        if (bs.m_lobe == bsdf::LobeType::SpecularReflection)
+        {
+            ray = core::Ray(biasedI, bs.m_wi, maxRayDist);
+        }
+        else // SpecularTransmission
+        {
+            // Save pre-bounce state for Beer-Lambert (volumetric absorption on exit)
+            const float oldT          = ray.m_t;
+            const float oldPrimRadius = ray.m_primRadius;
+
+            ray = core::Ray(I - faceN * EPSILON, bs.m_wi, maxRayDist);
+
+            if (!entering)
+                throughput *= beerLambertSSE(mat.m_baseColor, oldT, oldPrimRadius);
         }
 
         return result;
@@ -143,12 +148,15 @@ namespace rt::rendering {
                 * sampleIbl(biasedI, N, services) * (1.0f / config::g_kIblRussianRouletteProbability);
 
         // BSDF specular bounce (fires only if roughness < threshold)
-        const bsdf::BSDFSample bs = bsdf::sample(V, N, mat, services.m_bAccumulate);
-        if (bs.m_bIsValid)
+        if (mat.m_roughness < config::g_kReflectionRoughnessThreshold)
         {
-            result.m_throughputScale = bs.m_value;
-            result.m_bContinue       = true;
-            ray = core::Ray(biasedI, bs.m_wi, maxRayDist);
+            const bsdf::BSDFSample bs = bsdf::sample(V, N, mat, services.m_bAccumulate);
+            if (bs.m_bIsValid)
+            {
+                result.m_throughputScale = bs.m_value;
+                result.m_bContinue       = true;
+                ray = core::Ray(biasedI, bs.m_wi, maxRayDist);
+            }
         }
 
         return result;
