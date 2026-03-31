@@ -224,12 +224,6 @@ namespace rt::management {
     {
         bool changed = false;
 
-        if (ImGui::DragFloat("FOV##Renderer", &m_camera.m_fovDegrees,
-                             0.1f, 1.0f, 120.0f, "%.1f deg"))
-            changed = true;
-
-        ImGui::Separator();
-
         // Depth of Field
         // A lensRadius of 0 disables DoF entirely (pinhole camera).
         // Reference: Shirley & Morley, "Realistic Ray Tracing", 2nd ed., Section 12.2
