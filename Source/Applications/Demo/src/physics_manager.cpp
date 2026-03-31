@@ -4,45 +4,45 @@
 namespace demo
 {
 	PhysicsManager::PhysicsManager() :
-		objects(),
-		objectCount(0)
+		m_aObjects(),
+		m_objCount(0)
 	{
 	}
 
-	void PhysicsManager::AddPhysicsObject(const PhysicsObject& object)
+	void PhysicsManager::addPhysicsObject(const PhysicsObject& object)
 	{
-		if (objectCount >= MAX_OBJECTS) return;
-		objects[objectCount] = object;
-		objectCount++;
+		if (m_objCount >= MAX_OBJECTS) return;
+		m_aObjects[m_objCount] = object;
+		m_objCount++;
 	}
 
-    void PhysicsManager::RelaunchObject(const uint index, const float3& position, const float3& velocity) {
-	    if (index >= objectCount) return;
-	    objects[index].body.position = position;
-	    objects[index].body.velocity = velocity;
-	    objects[index].isGrounded = false;
+    void PhysicsManager::relaunchObject(const uint index, const float3& position, const float3& velocity) {
+	    if (index >= m_objCount) return;
+	    m_aObjects[index].body.position = position;
+	    m_aObjects[index].body.velocity = velocity;
+	    m_aObjects[index].isGrounded = false;
 	}
 
-	bool PhysicsManager::Update(const rt::scene::Scene& scene, const float dt)
+	bool PhysicsManager::update(const rt::scene::Scene& scene, const float dt)
 	{
-		if (objectCount == 0) return false;
+		if (m_objCount == 0) return false;
 
 		bool hasMovement = false;
-		for (uint i = 0; i < objectCount; i++)
+		for (uint i = 0; i < m_objCount; i++)
 		{
-			if (!IsMoving(objects[i])) continue;
+			if (!isMoving(m_aObjects[i])) continue;
 
-			objects[i].isGrounded = false;
+			m_aObjects[i].isGrounded = false;
 
-			ApplyGravity(objects[i], dt);
-			Integrate(objects[i], dt);
+			applyGravity(m_aObjects[i], dt);
+			integrate(m_aObjects[i], dt);
 
 			float3 N{};
 			float depth;
-			if (SphereCast(scene, objects[i].body.position, objects[i].radius, objects[i].body.velocity, N, depth))
+			if (sphereCast(scene, m_aObjects[i].body.position, m_aObjects[i].radius, m_aObjects[i].body.velocity, N, depth))
 			{
-				ResolveCollision(objects[i], N);
-				objects[i].body.position += N * depth;
+				resolveCollision(m_aObjects[i], N);
+				m_aObjects[i].body.position += N * depth;
 			}
 
 			hasMovement = true;
@@ -51,23 +51,23 @@ namespace demo
 		return hasMovement;
 	}
 
-	void PhysicsManager::Integrate(PhysicsObject& object, const float dt)
+	void PhysicsManager::integrate(PhysicsObject& object, const float dt)
 	{
 		object.body.position += object.body.velocity * dt;
 		object.body.velocity *= powf(DAMPING, dt);
 	}
 
-	void PhysicsManager::ApplyGravity(PhysicsObject& object, const float dt) const
+	void PhysicsManager::applyGravity(PhysicsObject& object, const float dt) const
     {
 		object.body.velocity += GRAVITY * dt;
 	}
 
-	bool PhysicsManager::IsMoving(const PhysicsObject& object)
+	bool PhysicsManager::isMoving(const PhysicsObject& object)
 	{
 		return length(object.body.velocity) > SLEEP_THRESHOLD || !object.isGrounded;
 	}
 
-	void PhysicsManager::ResolveCollision(PhysicsObject& object, const float3& normal)
+	void PhysicsManager::resolveCollision(PhysicsObject& object, const float3& normal)
 	{
 		const float vn = dot(object.body.velocity, normal);
 		const float3 normalComponent = normal * vn;

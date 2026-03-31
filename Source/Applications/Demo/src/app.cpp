@@ -55,7 +55,7 @@ namespace demo {
             obj.body.mass     = 1.0f;
             obj.radius        = ballRadius;
             obj.isGrounded    = false;
-            m_physics.AddPhysicsObject(obj);
+            m_physics.addPhysicsObject(obj);
         }
 
         m_renderer.getScene().m_analyticScene.buildBvh();
@@ -197,12 +197,12 @@ namespace demo {
 
         // --- Physics update (system by Thomas M.) ---
         {
-            const auto& physObj = m_physics.GetPhysicsObject(0);
+            const auto& physObj = m_physics.getPhysicsObject(0);
 
             // If the ball has settled, count down and relaunch
             if (m_badApple.isPlaying())
             {
-                if (!m_physics.Update(m_renderer.getScene(), deltaTime))
+                if (!m_physics.update(m_renderer.getScene(), deltaTime))
                 {
                     m_physicsRelaunchTimer += deltaTime;
 
@@ -222,7 +222,7 @@ namespace demo {
                             sinf(angle) * speed
                         );
 
-                        m_physics.RelaunchObject(0, launchPos, launchVel);
+                        m_physics.relaunchObject(0, launchPos, launchVel);
                     }
                 }
                 else
@@ -253,7 +253,7 @@ namespace demo {
                             0.12f,
                             sinf(angle) * speed
                         );
-                        m_physics.RelaunchObject(0, pos, newVel);
+                        m_physics.relaunchObject(0, pos, newVel);
                     }
                 }
 

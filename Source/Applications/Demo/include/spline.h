@@ -267,7 +267,7 @@ namespace demo {
         [[nodiscard]] int   keyframeCount() const { return static_cast<int>(m_times.size()); }
         [[nodiscard]] float startTime()     const { return m_times.empty() ? 0.0f : m_times.front(); }
         [[nodiscard]] float endTime()       const { return m_times.empty() ? 0.0f : m_times.back();  }
-        [[nodiscard]] float getTime(int i)  const { return m_times[i];  }
+        [[nodiscard]] float getTime(const int i)  const { return m_times[i];  }
         [[nodiscard]] T     getValue(int i) const { return m_values[i]; }
 
     private:

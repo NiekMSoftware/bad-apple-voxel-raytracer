@@ -36,23 +36,23 @@ namespace demo
 		PhysicsManager();
 		~PhysicsManager() = default;
 
-		void AddPhysicsObject(const PhysicsObject& object);
-		const PhysicsObject& GetPhysicsObject(const uint index) const { return objects[index]; }
+		void addPhysicsObject(const PhysicsObject& object);
+		const PhysicsObject& getPhysicsObject(const uint index) const { return m_aObjects[index]; }
 
-	    void RelaunchObject(uint index, const float3& position, const float3& velocity);
+	    void relaunchObject(uint index, const float3& position, const float3& velocity);
 
-		bool Update(const rt::scene::Scene& scene, float dt);
+		bool update(const rt::scene::Scene& scene, float dt);
 
 	private:
-		PhysicsObject objects[MAX_OBJECTS];
-		uint objectCount;
+		PhysicsObject m_aObjects[MAX_OBJECTS];
+		uint m_objCount;
 
 		//Update position
-        static void Integrate(PhysicsObject& object, float dt);
-		void ApplyGravity(PhysicsObject& object, float dt) const;
+        static void integrate(PhysicsObject& object, float dt);
+		void applyGravity(PhysicsObject& object, float dt) const;
 
 		//Sleep check
-        static bool IsMoving(const PhysicsObject& object);
-        static void ResolveCollision(PhysicsObject& object, const float3& normal);
+        static bool isMoving(const PhysicsObject& object);
+        static void resolveCollision(PhysicsObject& object, const float3& normal);
 	};
 }

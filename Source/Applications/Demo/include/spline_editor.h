@@ -30,7 +30,6 @@
 #include "rt/core/camera.h"
 #include "imgui.h"
 #include <cstdio>
-#include <cstring>
 #include <cstdint>
 
 namespace demo {
@@ -76,7 +75,7 @@ namespace demo {
         bool render(Spline<float3>& posSpline,
                     Spline<float3>& targetSpline,
                     rt::core::Camera& cam,
-                    float splineTime)
+                    const float splineTime)
         {
             if (!m_bVisible) return false;
 
@@ -374,7 +373,7 @@ namespace demo {
             FILE* f = fopen(path, "wb");
             if (!f) return false;
 
-            const uint32_t n = static_cast<uint32_t>(posSpline.keyframeCount());
+            const auto n = static_cast<uint32_t>(posSpline.keyframeCount());
             fwrite(&n, sizeof(uint32_t), 1, f);
 
             for (uint32_t i = 0; i < n; i++)

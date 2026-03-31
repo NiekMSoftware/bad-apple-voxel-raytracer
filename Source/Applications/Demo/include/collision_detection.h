@@ -6,7 +6,7 @@
 
 namespace demo
 {
-    inline bool SphereCast(
+    inline bool sphereCast(
         const rt::scene::Scene& scene,
         const float3& pos, const float radius,
         const float3& velocity,
