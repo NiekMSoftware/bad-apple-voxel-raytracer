@@ -158,6 +158,8 @@ namespace rt::management {
                 m_lightEditor.toggle();
             if (ImGui::MenuItem("Material Editor",   nullptr, m_materialEditor.isVisible()))
                 m_materialEditor.toggle();
+            if (ImGui::MenuItem("Spline Editor", nullptr, m_bShowSplineEditor))
+                m_bShowSplineEditor = !m_bShowSplineEditor;
             ImGui::EndMenu();
         }
 

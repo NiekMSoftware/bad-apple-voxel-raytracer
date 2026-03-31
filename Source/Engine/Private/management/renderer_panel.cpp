@@ -39,7 +39,10 @@ namespace rt::management {
         ImGui::Spacing();
 
         if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen))
+        {
             changed |= renderCameraSection();
+            changed |= renderDofSection();
+        }
 
         ImGui::Spacing();
 
@@ -214,6 +217,32 @@ namespace rt::management {
         if (ImGui::DragFloat("Exposure##Renderer", &exposure,
                              0.01f, 0.0f, 10.0f, "%.2f"))
             changed = true;
+        return changed;
+    }
+
+    bool RendererPanel::renderDofSection() const
+    {
+        bool changed = false;
+
+        if (ImGui::DragFloat("FOV##Renderer", &m_camera.m_fovDegrees,
+                             0.1f, 1.0f, 120.0f, "%.1f deg"))
+            changed = true;
+
+        ImGui::Separator();
+
+        // Depth of Field
+        // A lensRadius of 0 disables DoF entirely (pinhole camera).
+        // Reference: Shirley & Morley, "Realistic Ray Tracing", 2nd ed., Section 12.2
+        if (ImGui::DragFloat("Lens Radius##Renderer", &m_camera.m_lensRadius,
+                             0.001f, 0.0f, 0.5f, "%.4f"))
+            changed = true;
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("0 = pinhole (no DoF)");
+
+        if (ImGui::DragFloat("Focal Distance##Renderer", &m_camera.m_focalDistance,
+                             0.01f, 0.01f, 100.0f, "%.3f"))
+            changed = true;
+
         return changed;
     }
 

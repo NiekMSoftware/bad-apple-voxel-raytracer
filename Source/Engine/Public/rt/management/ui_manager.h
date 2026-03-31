@@ -69,12 +69,14 @@ namespace rt::management {
         rendering::MaterialEditor& getMaterialEditor() { return m_materialEditor; }
         RendererPanel&             getRendererPanel()  { return m_rendererPanel;  }
         ViewportPanel&             getViewportPanel()  { return m_viewportPanel;  }
+        bool&                      getShowSplineEditor() { return m_bShowSplineEditor; }
 
     private:
         LightEditor               m_lightEditor;
         rendering::MaterialEditor m_materialEditor;
         RendererPanel             m_rendererPanel;
         ViewportPanel             m_viewportPanel;
+        bool m_bShowSplineEditor = false;
 
         LightManager&               m_lightManager;
         rendering::MaterialManager& m_materialManager;

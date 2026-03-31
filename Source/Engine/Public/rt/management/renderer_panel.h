@@ -91,6 +91,7 @@ namespace rt::management {
         bool        renderCameraSection() const;
         bool        renderSkySection();
         static bool renderTonemapSection(float& exposure);
+        bool        renderDofSection() const;
 
         static const char* getFilename(const std::string& path);
     };

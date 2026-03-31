@@ -38,7 +38,7 @@ namespace demo {
             constexpr float inv = 1.0f / 512.0f;
 
             rt::primitives::Sphere glass;
-            glass.m_center   = float3(256.0f * inv, 12.0f * inv, 100.0f * inv);
+            glass.m_center   = float3(256.0f * inv, 32.0f * inv, 100.0f * inv);
             glass.m_radius   = 12.0f * inv;
             glass.m_matIndex = 2;
             m_renderer.getScene().m_analyticScene.addSphere(glass);
@@ -306,8 +306,9 @@ namespace demo {
 
         m_badApple.renderUI(m_renderer.getScene());
 
-        m_splineEditor.render(m_posSpline, m_targetSpline,
-                              m_renderer.getCamera(), m_splineTime);
+        if (m_uiManager.getShowSplineEditor())
+            m_splineEditor.render(m_posSpline, m_targetSpline,
+                                  m_renderer.getCamera(), m_splineTime);
 
         if (m_bCameraFree)
         {
