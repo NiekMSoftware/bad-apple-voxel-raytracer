@@ -36,10 +36,11 @@ namespace rt::lights {
 
         // Shadow test
         core::Ray shadowRay(I + N * EPSILON, sample.m_direction, sample.m_distance);
-        if (scene.isOccluded(shadowRay, matMgr)) return {0};
+        const float3 vis = scene.transmittance(shadowRay, matMgr);
+        if (vis.x == 0.0f && vis.y == 0.0f && vis.z == 0.0f) return {0};
 
         const float3 bsdf = bsdf::evaluate(ctx, mat);
-        return bsdf * sample.m_intensity * ctx.m_nDotL;
+        return bsdf * sample.m_intensity * ctx.m_nDotL * vis;
     }
 
 }  // namespace rt::lights

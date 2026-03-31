@@ -9,10 +9,16 @@ message(STATUS "----------------------------------------------")
 #  Project
 # =================================================================
 project(voxpopuli
-  VERSION     0.3.5  
+  VERSION     1.0.3
   DESCRIPTION "Voxel-based CPU ray tracer"
   LANGUAGES   C CXX
 )
+
+option(TEST_ENGINE "Enable Testing" OFF)
+if (TEST_ENGINE)
+    enable_testing()
+    add_test(NAME unit_tests COMMAND unit_tests)
+endif()
 
 message(STATUS "[${PROJECT_NAME}] v${PROJECT_VERSION} - ${PROJECT_DESCRIPTION}")
 message(STATUS "[${PROJECT_NAME}] Source dir : ${PROJECT_SOURCE_DIR}")
@@ -98,6 +104,10 @@ message(STATUS "[${PROJECT_NAME}] Configuring source tree...")
 add_subdirectory(${SOURCE_THIRDPARTY_DIR})
 add_subdirectory(${SOURCE_ENGINE_DIR})
 add_subdirectory(${SOURCE_APPS_DIR})
+
+if(TEST_ENGINE)
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/Source/Tests)
+endif()
 
 message(STATUS "[${PROJECT_NAME}] Source tree configured")
 

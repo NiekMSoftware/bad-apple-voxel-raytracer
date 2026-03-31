@@ -15,6 +15,8 @@ namespace rt::core {
     // =========================================================================
     // Renderer
     //
+    // Main class responsible for rendering the entire scene, manages camera
+    // and buffers.
     // =========================================================================
     class Renderer
     {
@@ -55,11 +57,11 @@ namespace rt::core {
 
         // --- Exposure ---
         [[nodiscard]] float getExposure() const  { return m_exposure; }
-        void                setExposure(float e) { m_exposure = e;    }
+        void                setExposure(const float e) { m_exposure = e;    }
 
         // --- Accumulation ---
         [[nodiscard]] bool getAccumulation() const { return m_bAccumulate; }
-        void               setAccumulation(bool b) { m_bAccumulate = b;    }
+        void               setAccumulation(const bool b) { m_bAccumulate = b;    }
 
         // --- SPP ---
         [[nodiscard]] int getSpp() const { return m_spp; }

@@ -391,20 +391,58 @@ namespace rt::scene {
 
         float3 result{ 1.0f };
 
-        // World DDA
+        // World DDA with super-grid acceleration
         {
-            internal::DDAState s{};
-            const BrickMap* map = m_pool.getMap();
-            if (internal::Setup3DDDA(map, ray, s))
+            const BrickMap* map          = m_pool.getMap();
+            bool            skipWorldDda = false;
             {
-                uint axis = s.m_axis, brickIdx; float3 brickOrigin{};
-                while (s.m_t < ray.m_t)
+                const float entryY = clamp(ray.m_o.y, 0.0f, 1.0f - VOXELSIZE);
+                const uint  originY = static_cast<uint>(entryY * GRIDSIZE);
+
+                if (ray.m_d.y > 0.0f)
+                    skipWorldDda = map->allYSlicesAboveEmpty(originY);
+                else if (ray.m_d.y < 0.0f)
+                    skipWorldDda = map->allYSlicesBelowEmpty(originY);
+            }
+
+            if (!skipWorldDda)
+            {
+                internal::SuperDDAState ss{};
+                if (internal::setupSuperDda(ray, ss))
                 {
-                    if (internal::GetBrickInfo(map, s.m_x, s.m_y, s.m_z, brickIdx, brickOrigin))
-                        if (!internal::Transmittance(ray, map, brickIdx, brickOrigin,
-                                                     s.m_t, materials, result))
-                            return { 0.0f };
-                    if (!internal::advanceDda(s, axis)) break;
+                    uint superAxis = ss.m_axis;
+                    while (ss.m_t < ray.m_t)
+                    {
+                        const uint superIdx = ss.m_x + ss.m_y * SUPERGRIDSIZE + ss.m_z * SUPERGRIDSIZE2;
+                        if (map->isSuperOccupied(superIdx))
+                        {
+                            internal::DDAState s{};
+                            internal::Setup3DDDAAt(map, ray, s, ss.m_t);
+
+                            const uint fineMinX = ss.m_x * 8, fineMaxX = fineMinX + 8;
+                            const uint fineMinY = ss.m_y * 8, fineMaxY = fineMinY + 8;
+                            const uint fineMinZ = ss.m_z * 8, fineMaxZ = fineMinZ + 8;
+
+                            uint axis = s.m_axis;
+                            uint brickIdx; float3 brickOrigin{};
+
+                            while (s.m_t < ray.m_t)
+                            {
+                                if (s.m_x < fineMinX || s.m_x >= fineMaxX ||
+                                    s.m_y < fineMinY || s.m_y >= fineMaxY ||
+                                    s.m_z < fineMinZ || s.m_z >= fineMaxZ)
+                                    break;
+
+                                // FIX: use Transmittance, not Occluded
+                                if (internal::GetBrickInfo(map, s.m_x, s.m_y, s.m_z, brickIdx, brickOrigin))
+                                    if (!internal::Transmittance(ray, map, brickIdx, brickOrigin,
+                                                                 s.m_t, materials, result))
+                                        return { 0.0f };
+                                if (!internal::advanceDda(s, axis)) break;
+                            }
+                        }
+                        if (!internal::advanceSuperDda(ss, superAxis)) break;
+                    }
                 }
             }
         }
@@ -416,15 +454,15 @@ namespace rt::scene {
 
             core::Ray lr = inst->transformRayToLocal(ray);
             internal::DDAState s{};
-            const BrickMap* map = inst->m_blas.getMap();
-            if (!internal::Setup3DDDA(map, lr, s)) continue;
-            if (lr.m_bInside) continue;   // ray started inside this instance — skip self-shadow
+            const BrickMap* instMap = inst->m_blas.getMap();
+            if (!internal::Setup3DDDA(instMap, lr, s)) continue;
+            if (lr.m_bInside) continue;
 
             uint axis = s.m_axis, brickIdx; float3 brickOrigin{};
             while (s.m_t < lr.m_t)
             {
-                if (internal::GetBrickInfo(map, s.m_x, s.m_y, s.m_z, brickIdx, brickOrigin))
-                    if (internal::Occluded(lr, map, brickIdx, brickOrigin, s.m_t))
+                if (internal::GetBrickInfo(instMap, s.m_x, s.m_y, s.m_z, brickIdx, brickOrigin))
+                    if (internal::Occluded(lr, instMap, brickIdx, brickOrigin, s.m_t))
                         return { 0.0f };
                 if (!internal::advanceDda(s, axis)) break;
             }
