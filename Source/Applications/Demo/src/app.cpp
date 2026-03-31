@@ -213,6 +213,31 @@ namespace demo {
             // If the ball has settled, count down and relaunch
             if (m_badApple.isPlaying())
             {
+                // --- Periodic dramatic yeet every 15 seconds ---
+                {
+                    constexpr float inv          = 1.0f / 512.0f;
+                    constexpr float YEET_PERIOD  = 15.0f;
+
+                    m_yeetTimer += deltaTime;
+
+                    if (m_yeetTimer >= YEET_PERIOD)
+                    {
+                        m_yeetTimer            = 0.0f;
+                        m_physicsRelaunchTimer = 0.0f;  // reset settle timer so it doesn't fire immediately after
+
+                        // Initial spawn position (matches buildScene)
+                        const float3 yeetPos = float3(256.0f * inv, 0.02f, 100.0f * inv);
+
+                        // Large upward + lateral velocity for a dramatic arc.
+                        // RESTITUTION = 0.5, DAMPING applied per-frame via powf(0.5, dt).
+                        // A y-component of ~1.5 gives a tall arc before gravity (−0.5 units/s²)
+                        // pulls it back down. Lateral components scatter it across the floor.
+                        const float3 yeetVel = float3(0.55f, 1.5f, 0.45f);
+
+                        m_physics.relaunchObject(0, yeetPos, yeetVel);
+                    }
+                }
+
                 if (!m_physics.update(m_renderer.getScene(), deltaTime))
                 {
                     m_physicsRelaunchTimer += deltaTime;
