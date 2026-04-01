@@ -27,13 +27,13 @@ message(STATUS "[${PROJECT_NAME}] Binary dir : ${PROJECT_BINARY_DIR}")
 # ============================================================
 #  Guard: prevent in-source builds
 # ============================================================
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
-  message(FATAL_ERROR
-    "[${PROJECT_NAME}] In-source builds are not allowed.\n"
-    "        Use a build preset or create a separate build directory.\n"
-    "        Remove CMakeCache.txt and the CMakeFiles/ directory, then try again."
-  )
-endif()
+# if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+#  message(FATAL_ERROR
+#    "[${PROJECT_NAME}] In-source builds are not allowed.\n"
+#    "        Use a build preset or create a separate build directory.\n"
+#    "        Remove CMakeCache.txt and the CMakeFiles/ directory, then try again."
+#  )
+#endif()
 
 # ============================================================
 #  Global CMake settings
@@ -104,6 +104,11 @@ message(STATUS "[${PROJECT_NAME}] Configuring source tree...")
 add_subdirectory(${SOURCE_THIRDPARTY_DIR})
 add_subdirectory(${SOURCE_ENGINE_DIR})
 add_subdirectory(${SOURCE_APPS_DIR})
+
+if(VOXPOPULI_BUILD_ALL OR VOXPOPULI_BUILD_DEMO)
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        PROPERTY VS_STARTUP_PROJECT raytracing-demo)
+endif()
 
 if(TEST_ENGINE)
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/Source/Tests)

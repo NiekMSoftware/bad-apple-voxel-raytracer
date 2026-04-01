@@ -71,3 +71,12 @@ camera.bin
 # OS
 .DS_Store
 Thumbs.db
+
+# CMake-generated VS project files (if configure runs in source dir)
+*.sln
+*.vcxproj
+*.vcxproj.filters
+Release/
+RelWithDebInfo/
+Debug/
+MinSizeRel/
