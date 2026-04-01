@@ -5,8 +5,8 @@ set "APP_NAME=raytracing-demo"
 set "PRESET=msvc"
 set "CONFIG=Release"
 
-:: Resolve project root (one level up from scripts/)
-set "ROOT=%~dp0.."
+:: Resolve project root
+set "ROOT=%~dp0"
 set "BUILD_DIR=%ROOT%\build\msvc"
 set "EXE=%ROOT%\x64\%APP_NAME%\%CONFIG%\%APP_NAME%.exe"
 
