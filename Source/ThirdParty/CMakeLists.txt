@@ -50,7 +50,8 @@ set(MINIAUDIO_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
 set(MINIAUDIO_BUILD_TOOLS    OFF CACHE BOOL "" FORCE)
 set(MINIAUDIO_INSTALL        OFF CACHE BOOL "" FORCE)
 
+set(CMAKE_FOLDER "ThirdParty")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/miniaudio")
-set_target_properties(miniaudio PROPERTIES FOLDER "ThirdParty")
+unset(CMAKE_FOLDER)
 
 message(STATUS "[ThirdParty] Third-party libraries configured")
