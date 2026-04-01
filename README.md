@@ -26,6 +26,10 @@ For the original version that Jacco Bikker made, check out: https://github.com/j
 
 The renderer traces primary rays through a two-level sparse voxel grid (a brick map), tests analytic spheres via a BVH built with tinyBVH, and evaluates triangle meshes through the same BVH library. Shading uses a Cook-Torrance microfacet BRDF with GGX distribution, Smith geometry, and Schlick Fresnel, supporting both isotropic and anisotropic materials. The accumulator blends samples over time with temporal reprojection and variance clipping when the camera moves.
 
+### AI Usage Disclaimer
+Claude has been mainly used purely for rendering UI and creating any UI related modules, I am not a big fan of UI programming.  
+The AI has also been used for documenting any related code needing documentation to make it a bit better, I personally believe this is a fine usage.
+
 ---
 
 ## Quick Start
