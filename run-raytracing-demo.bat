@@ -6,7 +6,9 @@ set "PRESET=msvc"
 set "CONFIG=Release"
 
 :: Resolve project root
-set "ROOT=%~dp0"
+set "ROOT=%~dp0."
+for %%I in ("%ROOT%") do set "ROOT=%%~fI"
+
 set "BUILD_DIR=%ROOT%\build\msvc"
 set "EXE=%ROOT%\x64\%APP_NAME%\%CONFIG%\%APP_NAME%.exe"
 
