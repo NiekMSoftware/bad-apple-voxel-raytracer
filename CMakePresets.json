@@ -57,7 +57,7 @@
       "displayName": "MSVC",
       "description": "Build all projects with MSVC",
       "inherits": "base-msvc",
-      "binaryDir": "${sourceDir}"
+      "binaryDir": "${sourceDir}/build/msvc"
     },
     {
       "name": "clang-cl",

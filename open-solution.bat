@@ -3,4 +3,4 @@ if not exist "build\msvc\voxpopuli.sln" (
     echo Configuring...
     cmake --preset msvc
 )
-start "" "voxpopuli.sln"
+start "" "build\msvc\voxpopuli.sln"
